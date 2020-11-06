@@ -3961,6 +3961,884 @@ function asArray(value) {
 
 },{}]},{},[13]);
 </script>
+<script>(function (root, factory) {
+	if (typeof define === 'function' && define.amd) {
+		// AMD. Register as an anonymous module.
+		define(['leaflet'], factory);
+	} else if (typeof modules === 'object' && module.exports) {
+		// define a Common JS module that relies on 'leaflet'
+		module.exports = factory(require('leaflet'));
+	} else {
+		// Assume Leaflet is loaded into global object L already
+		factory(L);
+	}
+}(this, function (L) {
+	'use strict';
+
+	L.TileLayer.Provider = L.TileLayer.extend({
+		initialize: function (arg, options) {
+			var providers = L.TileLayer.Provider.providers;
+
+			var parts = arg.split('.');
+
+			var providerName = parts[0];
+			var variantName = parts[1];
+
+			if (!providers[providerName]) {
+				throw 'No such provider (' + providerName + ')';
+			}
+
+			var provider = {
+				url: providers[providerName].url,
+				options: providers[providerName].options
+			};
+
+			// overwrite values in provider from variant.
+			if (variantName && 'variants' in providers[providerName]) {
+				if (!(variantName in providers[providerName].variants)) {
+					throw 'No such variant of ' + providerName + ' (' + variantName + ')';
+				}
+				var variant = providers[providerName].variants[variantName];
+				var variantOptions;
+				if (typeof variant === 'string') {
+					variantOptions = {
+						variant: variant
+					};
+				} else {
+					variantOptions = variant.options;
+				}
+				provider = {
+					url: variant.url || provider.url,
+					options: L.Util.extend({}, provider.options, variantOptions)
+				};
+			}
+
+			// replace attribution placeholders with their values from toplevel provider attribution,
+			// recursively
+			var attributionReplacer = function (attr) {
+				if (attr.indexOf('{attribution.') === -1) {
+					return attr;
+				}
+				return attr.replace(/\{attribution.(\w*)\}/g,
+					function (match, attributionName) {
+						return attributionReplacer(providers[attributionName].options.attribution);
+					}
+				);
+			};
+			provider.options.attribution = attributionReplacer(provider.options.attribution);
+
+			// Compute final options combining provider options with any user overrides
+			var layerOpts = L.Util.extend({}, provider.options, options);
+			L.TileLayer.prototype.initialize.call(this, provider.url, layerOpts);
+		}
+	});
+
+	/**
+	 * Definition of providers.
+	 * see http://leafletjs.com/reference.html#tilelayer for options in the options map.
+	 */
+
+	L.TileLayer.Provider.providers = {
+		OpenStreetMap: {
+			url: '//{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+			options: {
+				maxZoom: 19,
+				attribution:
+					'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+			},
+			variants: {
+				Mapnik: {},
+				DE: {
+					url: '//{s}.tile.openstreetmap.de/tiles/osmde/{z}/{x}/{y}.png',
+					options: {
+						maxZoom: 18
+					}
+				},
+				CH: {
+					url: '//tile.osm.ch/switzerland/{z}/{x}/{y}.png',
+					options: {
+						maxZoom: 18,
+						bounds: [[45, 5], [48, 11]]
+					}
+				},
+				France: {
+					url: '//{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png',
+					options: {
+						maxZoom: 20,
+						attribution: '&copy; Openstreetmap France | {attribution.OpenStreetMap}'
+					}
+				},
+				HOT: {
+					url: '//{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png',
+					options: {
+						attribution:
+							'{attribution.OpenStreetMap}, ' +
+							'Tiles style by <a href="https://www.hotosm.org/" target="_blank">Humanitarian OpenStreetMap Team</a> ' +
+							'hosted by <a href="https://openstreetmap.fr/" target="_blank">OpenStreetMap France</a>'
+					}
+				},
+				BZH: {
+					url: '//tile.openstreetmap.bzh/br/{z}/{x}/{y}.png',
+					options: {
+						attribution: '{attribution.OpenStreetMap}, Tiles courtesy of <a href="http://www.openstreetmap.bzh/" target="_blank">Breton OpenStreetMap Team</a>',
+						bounds: [[46.2, -5.5], [50, 0.7]]
+					}
+				}
+			}
+		},
+		OpenSeaMap: {
+			url: '//tiles.openseamap.org/seamark/{z}/{x}/{y}.png',
+			options: {
+				attribution: 'Map data: &copy; <a href="http://www.openseamap.org">OpenSeaMap</a> contributors'
+			}
+		},
+		OpenPtMap: {
+			url: 'http://openptmap.org/tiles/{z}/{x}/{y}.png',
+			options: {
+				maxZoom: 17,
+				attribution: 'Map data: &copy; <a href="http://www.openptmap.org">OpenPtMap</a> contributors'
+			}
+		},
+		OpenTopoMap: {
+			url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
+			options: {
+				maxZoom: 17,
+				attribution: 'Map data: {attribution.OpenStreetMap}, <a href="http://viewfinderpanoramas.org">SRTM</a> | Map style: &copy; <a href="https://opentopomap.org">OpenTopoMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)'
+			}
+		},
+		OpenRailwayMap: {
+			url: 'https://{s}.tiles.openrailwaymap.org/standard/{z}/{x}/{y}.png',
+			options: {
+				maxZoom: 19,
+				attribution: 'Map data: {attribution.OpenStreetMap} | Map style: &copy; <a href="https://www.OpenRailwayMap.org">OpenRailwayMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)'
+			}
+		},
+		OpenFireMap: {
+			url: 'http://openfiremap.org/hytiles/{z}/{x}/{y}.png',
+			options: {
+				maxZoom: 19,
+				attribution: 'Map data: {attribution.OpenStreetMap} | Map style: &copy; <a href="http://www.openfiremap.org">OpenFireMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)'
+			}
+		},
+		SafeCast: {
+			url: '//s3.amazonaws.com/te512.safecast.org/{z}/{x}/{y}.png',
+			options: {
+				maxZoom: 16,
+				attribution: 'Map data: {attribution.OpenStreetMap} | Map style: &copy; <a href="https://blog.safecast.org/about/">SafeCast</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)'
+			}
+		},
+		Thunderforest: {
+			url: 'https://{s}.tile.thunderforest.com/{variant}/{z}/{x}/{y}.png?apikey={apikey}',
+			options: {
+				attribution:
+					'&copy; <a href="http://www.thunderforest.com/">Thunderforest</a>, {attribution.OpenStreetMap}',
+				variant: 'cycle',
+				apikey: '<insert your api key here>',
+				maxZoom: 22
+			},
+			variants: {
+				OpenCycleMap: 'cycle',
+				Transport: {
+					options: {
+						variant: 'transport'
+					}
+				},
+				TransportDark: {
+					options: {
+						variant: 'transport-dark'
+					}
+				},
+				SpinalMap: {
+					options: {
+						variant: 'spinal-map'
+					}
+				},
+				Landscape: 'landscape',
+				Outdoors: 'outdoors',
+				Pioneer: 'pioneer',
+				MobileAtlas: 'mobile-atlas',
+				Neighbourhood: 'neighbourhood'
+			}
+		},
+		OpenMapSurfer: {
+			url: 'https://maps.heigit.org/openmapsurfer/tiles/{variant}/webmercator/{z}/{x}/{y}.png',
+			options: {
+				maxZoom: 19,
+				variant: 'roads',
+				attribution: 'Imagery from <a href="http://giscience.uni-hd.de/">GIScience Research Group @ University of Heidelberg</a> | Map data '
+			},
+			variants: {
+				Roads: {
+					options: {
+						variant: 'roads',
+						attribution: '{attribution.OpenMapSurfer}{attribution.OpenStreetMap}'
+					}
+				},
+				Hybrid: {
+					options: {
+						variant: 'hybrid',
+						attribution: '{attribution.OpenMapSurfer}{attribution.OpenStreetMap}'
+					}
+				},
+				AdminBounds: {
+					options: {
+						variant: 'adminb',
+						maxZoom: 18,
+						attribution: '{attribution.OpenMapSurfer}{attribution.OpenStreetMap}'
+					}
+				},
+				ContourLines: {
+					options: {
+						variant: 'asterc',
+						maxZoom: 18,
+						minZoom: 13,
+						attribution: '{attribution.OpenMapSurfer} <a href="https://lpdaac.usgs.gov/products/aster_policies">ASTER GDEM</a>'
+					}
+				},
+				Hillshade: {
+					options: {
+						variant: 'asterh',
+						maxZoom: 18,
+						attribution: '{attribution.OpenMapSurfer} <a href="https://lpdaac.usgs.gov/products/aster_policies">ASTER GDEM</a>, <a href="http://srtm.csi.cgiar.org/">SRTM</a>'
+					}
+				},
+				ElementsAtRisk: {
+					options: {
+						variant: 'elements_at_risk',
+						attribution: '{attribution.OpenMapSurfer}{attribution.OpenStreetMap}'
+					}
+				}
+			}
+		},
+		Hydda: {
+			url: '//{s}.tile.openstreetmap.se/hydda/{variant}/{z}/{x}/{y}.png',
+			options: {
+				maxZoom: 18,
+				variant: 'full',
+				attribution: 'Tiles courtesy of <a href="http://openstreetmap.se/" target="_blank">OpenStreetMap Sweden</a> &mdash; Map data {attribution.OpenStreetMap}'
+			},
+			variants: {
+				Full: 'full',
+				Base: 'base',
+				RoadsAndLabels: 'roads_and_labels'
+			}
+		},
+		MapBox: {
+			url: 'https://api.tiles.mapbox.com/v4/{id}/{z}/{x}/{y}{r}.png?access_token={accessToken}',
+			options: {
+				attribution:
+					'<a href="https://www.mapbox.com/about/maps/" target="_blank">&copy; Mapbox</a> ' +
+					'{attribution.OpenStreetMap} ' +
+					'<a href="https://www.mapbox.com/map-feedback/" target="_blank">Improve this map</a>',
+				subdomains: 'abcd',
+				id: 'mapbox.streets',
+				accessToken: '<insert your access token here>',
+			}
+		},
+		Stamen: {
+			url: '//stamen-tiles-{s}.a.ssl.fastly.net/{variant}/{z}/{x}/{y}{r}.{ext}',
+			options: {
+				attribution:
+					'Map tiles by <a href="http://stamen.com">Stamen Design</a>, ' +
+					'<a href="http://creativecommons.org/licenses/by/3.0">CC BY 3.0</a> &mdash; ' +
+					'Map data {attribution.OpenStreetMap}',
+				subdomains: 'abcd',
+				minZoom: 0,
+				maxZoom: 20,
+				variant: 'toner',
+				ext: 'png'
+			},
+			variants: {
+				Toner: 'toner',
+				TonerBackground: 'toner-background',
+				TonerHybrid: 'toner-hybrid',
+				TonerLines: 'toner-lines',
+				TonerLabels: 'toner-labels',
+				TonerLite: 'toner-lite',
+				Watercolor: {
+					url: '//stamen-tiles-{s}.a.ssl.fastly.net/{variant}/{z}/{x}/{y}.{ext}',
+					options: {
+						variant: 'watercolor',
+						ext: 'jpg',
+						minZoom: 1,
+						maxZoom: 16
+					}
+				},
+				Terrain: {
+					options: {
+						variant: 'terrain',
+						minZoom: 0,
+						maxZoom: 18
+					}
+				},
+				TerrainBackground: {
+					options: {
+						variant: 'terrain-background',
+						minZoom: 0,
+						maxZoom: 18
+					}
+				},
+				TerrainLabels: {
+					options: {
+						variant: 'terrain-labels',
+						minZoom: 0,
+						maxZoom: 18
+					}
+				},
+				TopOSMRelief: {
+					url: '//stamen-tiles-{s}.a.ssl.fastly.net/{variant}/{z}/{x}/{y}.{ext}',
+					options: {
+						variant: 'toposm-color-relief',
+						ext: 'jpg',
+						bounds: [[22, -132], [51, -56]]
+					}
+				},
+				TopOSMFeatures: {
+					options: {
+						variant: 'toposm-features',
+						bounds: [[22, -132], [51, -56]],
+						opacity: 0.9
+					}
+				}
+			}
+		},
+		TomTom: {
+			url: 'https://{s}.api.tomtom.com/map/1/tile/{variant}/{style}/{z}/{x}/{y}.{ext}?key={apikey}',
+			options: {
+				variant: 'basic',
+				maxZoom: 22,
+				attribution:
+					'<a href="https://tomtom.com" target="_blank">&copy;  1992 - ' + new Date().getFullYear() + ' TomTom.</a> ',
+				subdomains: 'abcd',
+				style: 'main',
+				ext: 'png',
+				apikey: '<insert your API key here>',
+			},
+			variants: {
+				Basic: 'basic',
+				Hybrid: 'hybrid',
+				Labels: 'labels'
+			}
+		},
+		Esri: {
+			url: '//server.arcgisonline.com/ArcGIS/rest/services/{variant}/MapServer/tile/{z}/{y}/{x}',
+			options: {
+				variant: 'World_Street_Map',
+				attribution: 'Tiles &copy; Esri'
+			},
+			variants: {
+				WorldStreetMap: {
+					options: {
+						attribution:
+							'{attribution.Esri} &mdash; ' +
+							'Source: Esri, DeLorme, NAVTEQ, USGS, Intermap, iPC, NRCAN, Esri Japan, METI, Esri China (Hong Kong), Esri (Thailand), TomTom, 2012'
+					}
+				},
+				DeLorme: {
+					options: {
+						variant: 'Specialty/DeLorme_World_Base_Map',
+						minZoom: 1,
+						maxZoom: 11,
+						attribution: '{attribution.Esri} &mdash; Copyright: &copy;2012 DeLorme'
+					}
+				},
+				WorldTopoMap: {
+					options: {
+						variant: 'World_Topo_Map',
+						attribution:
+							'{attribution.Esri} &mdash; ' +
+							'Esri, DeLorme, NAVTEQ, TomTom, Intermap, iPC, USGS, FAO, NPS, NRCAN, GeoBase, Kadaster NL, Ordnance Survey, Esri Japan, METI, Esri China (Hong Kong), and the GIS User Community'
+					}
+				},
+				WorldImagery: {
+					options: {
+						variant: 'World_Imagery',
+						attribution:
+							'{attribution.Esri} &mdash; ' +
+							'Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+					}
+				},
+				WorldTerrain: {
+					options: {
+						variant: 'World_Terrain_Base',
+						maxZoom: 13,
+						attribution:
+							'{attribution.Esri} &mdash; ' +
+							'Source: USGS, Esri, TANA, DeLorme, and NPS'
+					}
+				},
+				WorldShadedRelief: {
+					options: {
+						variant: 'World_Shaded_Relief',
+						maxZoom: 13,
+						attribution: '{attribution.Esri} &mdash; Source: Esri'
+					}
+				},
+				WorldPhysical: {
+					options: {
+						variant: 'World_Physical_Map',
+						maxZoom: 8,
+						attribution: '{attribution.Esri} &mdash; Source: US National Park Service'
+					}
+				},
+				OceanBasemap: {
+					options: {
+						variant: 'Ocean_Basemap',
+						maxZoom: 13,
+						attribution: '{attribution.Esri} &mdash; Sources: GEBCO, NOAA, CHS, OSU, UNH, CSUMB, National Geographic, DeLorme, NAVTEQ, and Esri'
+					}
+				},
+				NatGeoWorldMap: {
+					options: {
+						variant: 'NatGeo_World_Map',
+						maxZoom: 16,
+						attribution: '{attribution.Esri} &mdash; National Geographic, Esri, DeLorme, NAVTEQ, UNEP-WCMC, USGS, NASA, ESA, METI, NRCAN, GEBCO, NOAA, iPC'
+					}
+				},
+				WorldGrayCanvas: {
+					options: {
+						variant: 'Canvas/World_Light_Gray_Base',
+						maxZoom: 16,
+						attribution: '{attribution.Esri} &mdash; Esri, DeLorme, NAVTEQ'
+					}
+				}
+			}
+		},
+		OpenWeatherMap: {
+			url: 'http://{s}.tile.openweathermap.org/map/{variant}/{z}/{x}/{y}.png?appid={apiKey}',
+			options: {
+				maxZoom: 19,
+				attribution: 'Map data &copy; <a href="http://openweathermap.org">OpenWeatherMap</a>',
+				apiKey:'<insert your api key here>',
+				opacity: 0.5
+			},
+			variants: {
+				Clouds: 'clouds',
+				CloudsClassic: 'clouds_cls',
+				Precipitation: 'precipitation',
+				PrecipitationClassic: 'precipitation_cls',
+				Rain: 'rain',
+				RainClassic: 'rain_cls',
+				Pressure: 'pressure',
+				PressureContour: 'pressure_cntr',
+				Wind: 'wind',
+				Temperature: 'temp',
+				Snow: 'snow'
+			}
+		},
+		HERE: {
+			/*
+			 * HERE maps, formerly Nokia maps.
+			 * These basemaps are free, but you need an API key. Please sign up at
+			 * https://developer.here.com/plans
+			 */
+			url:
+				'https://{s}.{base}.maps.api.here.com/maptile/2.1/' +
+				'{type}/{mapID}/{variant}/{z}/{x}/{y}/{size}/{format}?' +
+				'app_id={app_id}&app_code={app_code}&lg={language}',
+			options: {
+				attribution:
+					'Map &copy; 1987-' + new Date().getFullYear() + ' <a href="http://developer.here.com">HERE</a>',
+				subdomains: '1234',
+				mapID: 'newest',
+				'app_id': '<insert your app_id here>',
+				'app_code': '<insert your app_code here>',
+				base: 'base',
+				variant: 'normal.day',
+				maxZoom: 20,
+				type: 'maptile',
+				language: 'eng',
+				format: 'png8',
+				size: '256'
+			},
+			variants: {
+				normalDay: 'normal.day',
+				normalDayCustom: 'normal.day.custom',
+				normalDayGrey: 'normal.day.grey',
+				normalDayMobile: 'normal.day.mobile',
+				normalDayGreyMobile: 'normal.day.grey.mobile',
+				normalDayTransit: 'normal.day.transit',
+				normalDayTransitMobile: 'normal.day.transit.mobile',
+				normalDayTraffic: {
+					options: {
+						variant: 'normal.traffic.day',
+						base: 'traffic',
+						type: 'traffictile'
+					}
+				},
+				normalNight: 'normal.night',
+				normalNightMobile: 'normal.night.mobile',
+				normalNightGrey: 'normal.night.grey',
+				normalNightGreyMobile: 'normal.night.grey.mobile',
+				normalNightTransit: 'normal.night.transit',
+				normalNightTransitMobile: 'normal.night.transit.mobile',
+				reducedDay: 'reduced.day',
+				reducedNight: 'reduced.night',
+				basicMap: {
+					options: {
+						type: 'basetile'
+					}
+				},
+				mapLabels: {
+					options: {
+						type: 'labeltile',
+						format: 'png'
+					}
+				},
+				trafficFlow: {
+					options: {
+						base: 'traffic',
+						type: 'flowtile'
+					}
+				},
+				carnavDayGrey: 'carnav.day.grey',
+				hybridDay: {
+					options: {
+						base: 'aerial',
+						variant: 'hybrid.day'
+					}
+				},
+				hybridDayMobile: {
+					options: {
+						base: 'aerial',
+						variant: 'hybrid.day.mobile'
+					}
+				},
+				hybridDayTransit: {
+					options: {
+						base: 'aerial',
+						variant: 'hybrid.day.transit'
+					}
+				},
+				hybridDayGrey: {
+					options: {
+						base: 'aerial',
+						variant: 'hybrid.grey.day'
+					}
+				},
+				hybridDayTraffic: {
+					options: {
+						variant: 'hybrid.traffic.day',
+						base: 'traffic',
+						type: 'traffictile'
+					}
+				},
+				pedestrianDay: 'pedestrian.day',
+				pedestrianNight: 'pedestrian.night',
+				satelliteDay: {
+					options: {
+						base: 'aerial',
+						variant: 'satellite.day'
+					}
+				},
+				terrainDay: {
+					options: {
+						base: 'aerial',
+						variant: 'terrain.day'
+					}
+				},
+				terrainDayMobile: {
+					options: {
+						base: 'aerial',
+						variant: 'terrain.day.mobile'
+					}
+				}
+			}
+		},
+		FreeMapSK: {
+			url: 'http://t{s}.freemap.sk/T/{z}/{x}/{y}.jpeg',
+			options: {
+				minZoom: 8,
+				maxZoom: 16,
+				subdomains: '1234',
+				bounds: [[47.204642, 15.996093], [49.830896, 22.576904]],
+				attribution:
+					'{attribution.OpenStreetMap}, vizualization CC-By-SA 2.0 <a href="http://freemap.sk">Freemap.sk</a>'
+			}
+		},
+		MtbMap: {
+			url: 'http://tile.mtbmap.cz/mtbmap_tiles/{z}/{x}/{y}.png',
+			options: {
+				attribution:
+					'{attribution.OpenStreetMap} &amp; USGS'
+			}
+		},
+		CartoDB: {
+			url: 'https://{s}.basemaps.cartocdn.com/{variant}/{z}/{x}/{y}{r}.png',
+			options: {
+				attribution: '{attribution.OpenStreetMap} &copy; <a href="https://carto.com/attributions">CARTO</a>',
+				subdomains: 'abcd',
+				maxZoom: 19,
+				variant: 'light_all'
+			},
+			variants: {
+				Positron: 'light_all',
+				PositronNoLabels: 'light_nolabels',
+				PositronOnlyLabels: 'light_only_labels',
+				DarkMatter: 'dark_all',
+				DarkMatterNoLabels: 'dark_nolabels',
+				DarkMatterOnlyLabels: 'dark_only_labels',
+				Voyager: 'rastertiles/voyager',
+				VoyagerNoLabels: 'rastertiles/voyager_nolabels',
+				VoyagerOnlyLabels: 'rastertiles/voyager_only_labels',
+				VoyagerLabelsUnder: 'rastertiles/voyager_labels_under'
+			}
+		},
+		HikeBike: {
+			url: 'https://tiles.wmflabs.org/{variant}/{z}/{x}/{y}.png',
+			options: {
+				maxZoom: 19,
+				attribution: '{attribution.OpenStreetMap}',
+				variant: 'hikebike'
+			},
+			variants: {
+				HikeBike: {},
+				HillShading: {
+					options: {
+						maxZoom: 15,
+						variant: 'hillshading'
+					}
+				}
+			}
+		},
+		BasemapAT: {
+			url: '//maps{s}.wien.gv.at/basemap/{variant}/normal/google3857/{z}/{y}/{x}.{format}',
+			options: {
+				maxZoom: 19,
+				attribution: 'Datenquelle: <a href="https://www.basemap.at">basemap.at</a>',
+				subdomains: ['', '1', '2', '3', '4'],
+				format: 'png',
+				bounds: [[46.358770, 8.782379], [49.037872, 17.189532]],
+				variant: 'geolandbasemap'
+			},
+			variants: {
+				basemap: {
+					options: {
+						maxZoom: 20, // currently only in Vienna
+						variant: 'geolandbasemap'
+					}
+				},
+				grau: 'bmapgrau',
+				overlay: 'bmapoverlay',
+				highdpi: {
+					options: {
+						variant: 'bmaphidpi',
+						format: 'jpeg'
+					}
+				},
+				orthofoto: {
+					options: {
+						maxZoom: 20, // currently only in Vienna
+						variant: 'bmaporthofoto30cm',
+						format: 'jpeg'
+					}
+				}
+			}
+		},
+		nlmaps: {
+			url: '//geodata.nationaalgeoregister.nl/tiles/service/wmts/{variant}/EPSG:3857/{z}/{x}/{y}.png',
+			options: {
+				minZoom: 6,
+				maxZoom: 19,
+				bounds: [[50.5, 3.25], [54, 7.6]],
+				attribution: 'Kaartgegevens &copy; <a href="kadaster.nl">Kadaster</a>'
+			},
+			variants: {
+				'standaard': 'brtachtergrondkaart',
+				'pastel': 'brtachtergrondkaartpastel',
+				'grijs': 'brtachtergrondkaartgrijs',
+				'luchtfoto': {
+					'url': '//geodata.nationaalgeoregister.nl/luchtfoto/rgb/wmts/1.0.0/2016_ortho25/EPSG:3857/{z}/{x}/{y}.png',
+				}
+			}
+		},
+		NASAGIBS: {
+			url: 'https://map1.vis.earthdata.nasa.gov/wmts-webmerc/{variant}/default/{time}/{tilematrixset}{maxZoom}/{z}/{y}/{x}.{format}',
+			options: {
+				attribution:
+					'Imagery provided by services from the Global Imagery Browse Services (GIBS), operated by the NASA/GSFC/Earth Science Data and Information System ' +
+					'(<a href="https://earthdata.nasa.gov">ESDIS</a>) with funding provided by NASA/HQ.',
+				bounds: [[-85.0511287776, -179.999999975], [85.0511287776, 179.999999975]],
+				minZoom: 1,
+				maxZoom: 9,
+				format: 'jpg',
+				time: '',
+				tilematrixset: 'GoogleMapsCompatible_Level'
+			},
+			variants: {
+				ModisTerraTrueColorCR: 'MODIS_Terra_CorrectedReflectance_TrueColor',
+				ModisTerraBands367CR: 'MODIS_Terra_CorrectedReflectance_Bands367',
+				ViirsEarthAtNight2012: {
+					options: {
+						variant: 'VIIRS_CityLights_2012',
+						maxZoom: 8
+					}
+				},
+				ModisTerraLSTDay: {
+					options: {
+						variant: 'MODIS_Terra_Land_Surface_Temp_Day',
+						format: 'png',
+						maxZoom: 7,
+						opacity: 0.75
+					}
+				},
+				ModisTerraSnowCover: {
+					options: {
+						variant: 'MODIS_Terra_Snow_Cover',
+						format: 'png',
+						maxZoom: 8,
+						opacity: 0.75
+					}
+				},
+				ModisTerraAOD: {
+					options: {
+						variant: 'MODIS_Terra_Aerosol',
+						format: 'png',
+						maxZoom: 6,
+						opacity: 0.75
+					}
+				},
+				ModisTerraChlorophyll: {
+					options: {
+						variant: 'MODIS_Terra_Chlorophyll_A',
+						format: 'png',
+						maxZoom: 7,
+						opacity: 0.75
+					}
+				}
+			}
+		},
+		NLS: {
+			// NLS maps are copyright National library of Scotland.
+			// http://maps.nls.uk/projects/api/index.html
+			// Please contact NLS for anything other than non-commercial low volume usage
+			//
+			// Map sources: Ordnance Survey 1:1m to 1:63K, 1920s-1940s
+			//   z0-9  - 1:1m
+			//  z10-11 - quarter inch (1:253440)
+			//  z12-18 - one inch (1:63360)
+			url: '//nls-{s}.tileserver.com/nls/{z}/{x}/{y}.jpg',
+			options: {
+				attribution: '<a href="http://geo.nls.uk/maps/">National Library of Scotland Historic Maps</a>',
+				bounds: [[49.6, -12], [61.7, 3]],
+				minZoom: 1,
+				maxZoom: 18,
+				subdomains: '0123',
+			}
+		},
+		JusticeMap: {
+			// Justice Map (http://www.justicemap.org/)
+			// Visualize race and income data for your community, county and country.
+			// Includes tools for data journalists, bloggers and community activists.
+			url: 'http://www.justicemap.org/tile/{size}/{variant}/{z}/{x}/{y}.png',
+			options: {
+				attribution: '<a href="http://www.justicemap.org/terms.php">Justice Map</a>',
+				// one of 'county', 'tract', 'block'
+				size: 'county',
+				// Bounds for USA, including Alaska and Hawaii
+				bounds: [[14, -180], [72, -56]]
+			},
+			variants: {
+				income: 'income',
+				americanIndian: 'indian',
+				asian: 'asian',
+				black: 'black',
+				hispanic: 'hispanic',
+				multi: 'multi',
+				nonWhite: 'nonwhite',
+				white: 'white',
+				plurality: 'plural'
+			}
+		},
+		Wikimedia: {
+			url: 'https://maps.wikimedia.org/osm-intl/{z}/{x}/{y}{r}.png',
+			options: {
+				attribution: '<a href="https://wikimediafoundation.org/wiki/Maps_Terms_of_Use">Wikimedia</a>',
+				minZoom: 1,
+				maxZoom: 19
+			}
+		},
+		GeoportailFrance: {
+			url: 'https://wxs.ign.fr/{apikey}/geoportail/wmts?REQUEST=GetTile&SERVICE=WMTS&VERSION=1.0.0&STYLE={style}&TILEMATRIXSET=PM&FORMAT={format}&LAYER={variant}&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}',
+			options: {
+				attribution: '<a target="_blank" href="https://www.geoportail.gouv.fr/">Geoportail France</a>',
+				bounds: [[-75, -180], [81, 180]],
+				minZoom: 2,
+				maxZoom: 18,
+				// Get your own geoportail apikey here : http://professionnels.ign.fr/ign/contrats/
+				// NB : 'choisirgeoportail' is a demonstration key that comes with no guarantee
+				apikey: 'choisirgeoportail',
+				format: 'image/jpeg',
+				style : 'normal',
+				variant: 'GEOGRAPHICALGRIDSYSTEMS.MAPS.SCAN-EXPRESS.STANDARD'
+			},
+			variants: {
+				parcels: {
+					options : {
+						variant: 'CADASTRALPARCELS.PARCELS',
+						maxZoom: 20,
+						style : 'bdparcellaire',
+						format: 'image/png'
+					}
+				},
+				ignMaps: 'GEOGRAPHICALGRIDSYSTEMS.MAPS',
+				maps: 'GEOGRAPHICALGRIDSYSTEMS.MAPS.SCAN-EXPRESS.STANDARD',
+				orthos: {
+					options: {
+						maxZoom: 19,
+						variant: 'ORTHOIMAGERY.ORTHOPHOTOS'
+					}
+				}
+			}
+		},
+		OneMapSG: {
+			url: '//maps-{s}.onemap.sg/v3/{variant}/{z}/{x}/{y}.png',
+			options: {
+				variant: 'Default',
+				minZoom: 11,
+				maxZoom: 18,
+				bounds: [[1.56073, 104.11475], [1.16, 103.502]],
+				attribution: '<img src="https://docs.onemap.sg/maps/images/oneMap64-01.png" style="height:20px;width:20px;"/> New OneMap | Map data &copy; contributors, <a href="http://SLA.gov.sg">Singapore Land Authority</a>'
+			},
+			variants: {
+				Default: 'Default',
+				Night: 'Night',
+				Original: 'Original',
+				Grey: 'Grey',
+				LandLot: 'LandLot'
+			}
+		}
+	};
+
+	L.tileLayer.provider = function (provider, options) {
+		return new L.TileLayer.Provider(provider, options);
+	};
+
+	return L;
+}));
+</script>
+<script>LeafletWidget.methods.addProviderTiles = function(provider, layerId, group, options) {
+  this.layerManager.addLayer(L.tileLayer.provider(provider, options), "tile", layerId, group);
+};
+</script>
+<script>Fuse=function(e){var t={};function r(n){if(t[n])return t[n].exports;var o=t[n]={i:n,l:!1,exports:{}};return e[n].call(o.exports,o,o.exports,r),o.l=!0,o.exports}return r.m=e,r.c=t,r.d=function(e,t,n){r.o(e,t)||Object.defineProperty(e,t,{configurable:!1,enumerable:!0,get:n})},r.r=function(e){Object.defineProperty(e,"__esModule",{value:!0})},r.n=function(e){var t=e&&e.__esModule?function(){return e.default}:function(){return e};return r.d(t,"a",t),t},r.o=function(e,t){return Object.prototype.hasOwnProperty.call(e,t)},r.p="",r(r.s=0)}([function(e,t,r){
+/*!
+ * Fuse.js v3.2.0 - Lightweight fuzzy-search (http://fusejs.io)
+ * 
+ * Copyright (c) 2012-2017 Kirollos Risk (http://kiro.me)
+ * All Rights Reserved. Apache Software License 2.0
+ * 
+ * http://www.apache.org/licenses/LICENSE-2.0
+ */
+var n;n=function(){return function(e){var t={};function r(n){if(t[n])return t[n].exports;var o=t[n]={i:n,l:!1,exports:{}};return e[n].call(o.exports,o,o.exports,r),o.l=!0,o.exports}return r.m=e,r.c=t,r.i=function(e){return e},r.d=function(e,t,n){r.o(e,t)||Object.defineProperty(e,t,{configurable:!1,enumerable:!0,get:n})},r.n=function(e){var t=e&&e.__esModule?function(){return e.default}:function(){return e};return r.d(t,"a",t),t},r.o=function(e,t){return Object.prototype.hasOwnProperty.call(e,t)},r.p="",r(r.s=8)}([function(e,t,r){"use strict";e.exports=function(e){return"[object Array]"===Object.prototype.toString.call(e)}},function(e,t,r){"use strict";var n=function(){function e(e,t){for(var r=0;r<t.length;r++){var n=t[r];n.enumerable=n.enumerable||!1,n.configurable=!0,"value"in n&&(n.writable=!0),Object.defineProperty(e,n.key,n)}}return function(t,r,n){return r&&e(t.prototype,r),n&&e(t,n),t}}();var o=r(5),i=r(7),a=r(4),s=function(){function e(t,r){var n=r.location,o=void 0===n?0:n,i=r.distance,s=void 0===i?100:i,c=r.threshold,h=void 0===c?.6:c,u=r.maxPatternLength,l=void 0===u?32:u,v=r.isCaseSensitive,f=void 0!==v&&v,d=r.tokenSeparator,p=void 0===d?/ +/g:d,g=r.findAllMatches,y=void 0!==g&&g,m=r.minMatchCharLength,k=void 0===m?1:m;!function(e,t){if(!(e instanceof t))throw new TypeError("Cannot call a class as a function")}(this,e),this.options={location:o,distance:s,threshold:h,maxPatternLength:l,isCaseSensitive:f,tokenSeparator:p,findAllMatches:y,minMatchCharLength:k},this.pattern=this.options.isCaseSensitive?t:t.toLowerCase(),this.pattern.length<=l&&(this.patternAlphabet=a(this.pattern))}return n(e,[{key:"search",value:function(e){if(this.options.isCaseSensitive||(e=e.toLowerCase()),this.pattern===e)return{isMatch:!0,score:0,matchedIndices:[[0,e.length-1]]};var t=this.options,r=t.maxPatternLength,n=t.tokenSeparator;if(this.pattern.length>r)return o(e,this.pattern,n);var a=this.options,s=a.location,c=a.distance,h=a.threshold,u=a.findAllMatches,l=a.minMatchCharLength;return i(e,this.pattern,this.patternAlphabet,{location:s,distance:c,threshold:h,findAllMatches:u,minMatchCharLength:l})}}]),e}();e.exports=s},function(e,t,r){"use strict";var n=r(0);e.exports=function(e,t){return function e(t,r,o){if(r){var i=r.indexOf("."),a=r,s=null;-1!==i&&(a=r.slice(0,i),s=r.slice(i+1));var c=t[a];if(null!==c&&void 0!==c)if(s||"string"!=typeof c&&"number"!=typeof c)if(n(c))for(var h=0,u=c.length;h<u;h+=1)e(c[h],s,o);else s&&e(c,s,o);else o.push(c.toString())}else o.push(t);return o}(e,t,[])}},function(e,t,r){"use strict";e.exports=function(){for(var e=arguments.length>0&&void 0!==arguments[0]?arguments[0]:[],t=arguments.length>1&&void 0!==arguments[1]?arguments[1]:1,r=[],n=-1,o=-1,i=0,a=e.length;i<a;i+=1){var s=e[i];s&&-1===n?n=i:s||-1===n||((o=i-1)-n+1>=t&&r.push([n,o]),n=-1)}return e[i-1]&&i-n>=t&&r.push([n,i-1]),r}},function(e,t,r){"use strict";e.exports=function(e){for(var t={},r=e.length,n=0;n<r;n+=1)t[e.charAt(n)]=0;for(var o=0;o<r;o+=1)t[e.charAt(o)]|=1<<r-o-1;return t}},function(e,t,r){"use strict";var n=/[\-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|]/g;e.exports=function(e,t){var r=arguments.length>2&&void 0!==arguments[2]?arguments[2]:/ +/g,o=new RegExp(t.replace(n,"\\$&").replace(r,"|")),i=e.match(o),a=!!i,s=[];if(a)for(var c=0,h=i.length;c<h;c+=1){var u=i[c];s.push([e.indexOf(u),u.length-1])}return{score:a?.5:1,isMatch:a,matchedIndices:s}}},function(e,t,r){"use strict";e.exports=function(e,t){var r=t.errors,n=void 0===r?0:r,o=t.currentLocation,i=void 0===o?0:o,a=t.expectedLocation,s=void 0===a?0:a,c=t.distance,h=void 0===c?100:c,u=n/e.length,l=Math.abs(s-i);return h?u+l/h:l?1:u}},function(e,t,r){"use strict";var n=r(6),o=r(3);e.exports=function(e,t,r,i){for(var a=i.location,s=void 0===a?0:a,c=i.distance,h=void 0===c?100:c,u=i.threshold,l=void 0===u?.6:u,v=i.findAllMatches,f=void 0!==v&&v,d=i.minMatchCharLength,p=void 0===d?1:d,g=s,y=e.length,m=l,k=e.indexOf(t,g),x=t.length,S=[],M=0;M<y;M+=1)S[M]=0;if(-1!==k){var _=n(t,{errors:0,currentLocation:k,expectedLocation:g,distance:h});if(m=Math.min(_,m),-1!==(k=e.lastIndexOf(t,g+x))){var b=n(t,{errors:0,currentLocation:k,expectedLocation:g,distance:h});m=Math.min(b,m)}}k=-1;for(var w=[],L=1,C=x+y,A=1<<x-1,I=0;I<x;I+=1){for(var O=0,P=C;O<P;){n(t,{errors:I,currentLocation:g+P,expectedLocation:g,distance:h})<=m?O=P:C=P,P=Math.floor((C-O)/2+O)}C=P;var j=Math.max(1,g-P+1),z=f?y:Math.min(g+P,y)+x,F=Array(z+2);F[z+1]=(1<<I)-1;for(var T=z;T>=j;T-=1){var E=T-1,K=r[e.charAt(E)];if(K&&(S[E]=1),F[T]=(F[T+1]<<1|1)&K,0!==I&&(F[T]|=(w[T+1]|w[T])<<1|1|w[T+1]),F[T]&A&&(L=n(t,{errors:I,currentLocation:E,expectedLocation:g,distance:h}))<=m){if(m=L,(k=E)<=g)break;j=Math.max(1,2*g-k)}}if(n(t,{errors:I+1,currentLocation:g,expectedLocation:g,distance:h})>m)break;w=F}return{isMatch:k>=0,score:0===L?.001:L,matchedIndices:o(S,p)}}},function(e,t,r){"use strict";var n=function(){function e(e,t){for(var r=0;r<t.length;r++){var n=t[r];n.enumerable=n.enumerable||!1,n.configurable=!0,"value"in n&&(n.writable=!0),Object.defineProperty(e,n.key,n)}}return function(t,r,n){return r&&e(t.prototype,r),n&&e(t,n),t}}();var o=r(1),i=r(2),a=r(0),s=function(){function e(t,r){var n=r.location,o=void 0===n?0:n,a=r.distance,s=void 0===a?100:a,c=r.threshold,h=void 0===c?.6:c,u=r.maxPatternLength,l=void 0===u?32:u,v=r.caseSensitive,f=void 0!==v&&v,d=r.tokenSeparator,p=void 0===d?/ +/g:d,g=r.findAllMatches,y=void 0!==g&&g,m=r.minMatchCharLength,k=void 0===m?1:m,x=r.id,S=void 0===x?null:x,M=r.keys,_=void 0===M?[]:M,b=r.shouldSort,w=void 0===b||b,L=r.getFn,C=void 0===L?i:L,A=r.sortFn,I=void 0===A?function(e,t){return e.score-t.score}:A,O=r.tokenize,P=void 0!==O&&O,j=r.matchAllTokens,z=void 0!==j&&j,F=r.includeMatches,T=void 0!==F&&F,E=r.includeScore,K=void 0!==E&&E,$=r.verbose,J=void 0!==$&&$;!function(e,t){if(!(e instanceof t))throw new TypeError("Cannot call a class as a function")}(this,e),this.options={location:o,distance:s,threshold:h,maxPatternLength:l,isCaseSensitive:f,tokenSeparator:p,findAllMatches:y,minMatchCharLength:k,id:S,keys:_,includeMatches:T,includeScore:K,shouldSort:w,getFn:C,sortFn:I,verbose:J,tokenize:P,matchAllTokens:z},this.setCollection(t)}return n(e,[{key:"setCollection",value:function(e){return this.list=e,e}},{key:"search",value:function(e){this._log('---------\nSearch pattern: "'+e+'"');var t=this._prepareSearchers(e),r=t.tokenSearchers,n=t.fullSearcher,o=this._search(r,n),i=o.weights,a=o.results;return this._computeScore(i,a),this.options.shouldSort&&this._sort(a),this._format(a)}},{key:"_prepareSearchers",value:function(){var e=arguments.length>0&&void 0!==arguments[0]?arguments[0]:"",t=[];if(this.options.tokenize)for(var r=e.split(this.options.tokenSeparator),n=0,i=r.length;n<i;n+=1)t.push(new o(r[n],this.options));return{tokenSearchers:t,fullSearcher:new o(e,this.options)}}},{key:"_search",value:function(){var e=arguments.length>0&&void 0!==arguments[0]?arguments[0]:[],t=arguments[1],r=this.list,n={},o=[];if("string"==typeof r[0]){for(var i=0,a=r.length;i<a;i+=1)this._analyze({key:"",value:r[i],record:i,index:i},{resultMap:n,results:o,tokenSearchers:e,fullSearcher:t});return{weights:null,results:o}}for(var s={},c=0,h=r.length;c<h;c+=1)for(var u=r[c],l=0,v=this.options.keys.length;l<v;l+=1){var f=this.options.keys[l];if("string"!=typeof f){if(s[f.name]={weight:1-f.weight||1},f.weight<=0||f.weight>1)throw new Error("Key weight has to be > 0 and <= 1");f=f.name}else s[f]={weight:1};this._analyze({key:f,value:this.options.getFn(u,f),record:u,index:c},{resultMap:n,results:o,tokenSearchers:e,fullSearcher:t})}return{weights:s,results:o}}},{key:"_analyze",value:function(e,t){var r=e.key,n=e.arrayIndex,o=void 0===n?-1:n,i=e.value,s=e.record,c=e.index,h=t.tokenSearchers,u=void 0===h?[]:h,l=t.fullSearcher,v=void 0===l?[]:l,f=t.resultMap,d=void 0===f?{}:f,p=t.results,g=void 0===p?[]:p;if(void 0!==i&&null!==i){var y=!1,m=-1,k=0;if("string"==typeof i){this._log("\nKey: "+(""===r?"-":r));var x=v.search(i);if(this._log('Full text: "'+i+'", score: '+x.score),this.options.tokenize){for(var S=i.split(this.options.tokenSeparator),M=[],_=0;_<u.length;_+=1){var b=u[_];this._log('\nPattern: "'+b.pattern+'"');for(var w=!1,L=0;L<S.length;L+=1){var C=S[L],A=b.search(C),I={};A.isMatch?(I[C]=A.score,y=!0,w=!0,M.push(A.score)):(I[C]=1,this.options.matchAllTokens||M.push(1)),this._log('Token: "'+C+'", score: '+I[C])}w&&(k+=1)}m=M[0];for(var O=M.length,P=1;P<O;P+=1)m+=M[P];m/=O,this._log("Token score average:",m)}var j=x.score;m>-1&&(j=(j+m)/2),this._log("Score average:",j);var z=!this.options.tokenize||!this.options.matchAllTokens||k>=u.length;if(this._log("\nCheck Matches: "+z),(y||x.isMatch)&&z){var F=d[c];F?F.output.push({key:r,arrayIndex:o,value:i,score:j,matchedIndices:x.matchedIndices}):(d[c]={item:s,output:[{key:r,arrayIndex:o,value:i,score:j,matchedIndices:x.matchedIndices}]},g.push(d[c]))}}else if(a(i))for(var T=0,E=i.length;T<E;T+=1)this._analyze({key:r,arrayIndex:T,value:i[T],record:s,index:c},{resultMap:d,results:g,tokenSearchers:u,fullSearcher:v})}}},{key:"_computeScore",value:function(e,t){this._log("\n\nComputing score:\n");for(var r=0,n=t.length;r<n;r+=1){for(var o=t[r].output,i=o.length,a=0,s=1,c=0;c<i;c+=1){var h=e?e[o[c].key].weight:1,u=(1===h?o[c].score:o[c].score||.001)*h;1!==h?s=Math.min(s,u):(o[c].nScore=u,a+=u)}t[r].score=1===s?a/i:s,this._log(t[r])}}},{key:"_sort",value:function(e){this._log("\n\nSorting...."),e.sort(this.options.sortFn)}},{key:"_format",value:function(e){var t=[];this._log("\n\nOutput:\n\n",JSON.stringify(e));var r=[];this.options.includeMatches&&r.push(function(e,t){var r=e.output;t.matches=[];for(var n=0,o=r.length;n<o;n+=1){var i=r[n];if(0!==i.matchedIndices.length){var a={indices:i.matchedIndices,value:i.value};i.key&&(a.key=i.key),i.hasOwnProperty("arrayIndex")&&i.arrayIndex>-1&&(a.arrayIndex=i.arrayIndex),t.matches.push(a)}}}),this.options.includeScore&&r.push(function(e,t){t.score=e.score});for(var n=0,o=e.length;n<o;n+=1){var i=e[n];if(this.options.id&&(i.item=this.options.getFn(i.item,this.options.id)[0]),r.length){for(var a={item:i.item},s=0,c=r.length;s<c;s+=1)r[s](i,a);t.push(a)}else t.push(i.item)}return t}},{key:"_log",value:function(){var e;this.options.verbose&&(e=console).log.apply(e,arguments)}}]),e}();e.exports=s}])},e.exports=n()}]);
+//# sourceMappingURL=fuse_js-prod.js.map</script>
+<style type="text/css">
+.leaflet-container .leaflet-control-search{position:relative;float:left;background:#fff;color:#1978cf;-moz-border-radius:4px;-webkit-border-radius:4px;border-radius:4px;background-color:rgba(255,255,255,.8);z-index:1000;box-shadow:0 1px 7px rgba(0,0,0,.65);margin-left:10px;margin-top:10px}.leaflet-control-search.search-exp{box-shadow:0 1px 7px #999;background:#fff}.leaflet-control-search .search-input{display:block;float:left;background:#fff;border:1px solid #666;border-radius:2px;height:18px;padding:0 18px 0 2px;margin:3px 0 3px 3px}.leaflet-control-search.search-load .search-input{background:url(data:image/gif;base64,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) no-repeat center right #fff}.leaflet-control-search.search-load .search-cancel{visibility:hidden}.leaflet-control-search .search-cancel{display:block;width:22px;height:18px;position:absolute;right:22px;margin:3px 0;background:url(data:image/png;base64,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) no-repeat 0 -46px;text-decoration:none;filter:alpha(opacity=80);opacity:.8}.leaflet-control-search .search-cancel:hover{filter:alpha(opacity=100);opacity:1}.leaflet-control-search .search-cancel span{display:none;font-size:18px;line-height:20px;color:#ccc;font-weight:700}.leaflet-control-search .search-cancel:hover span{color:#aaa}.leaflet-control-search .search-button{display:block;float:left;width:26px;height:26px;background:url(data:image/png;base64,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) no-repeat 2px 2px #fff;border-radius:4px}.leaflet-control-search .search-button:hover{background:url(data:image/png;base64,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) no-repeat 2px -22px #fafafa}.leaflet-control-search .search-tooltip{position:absolute;top:100%;left:0;float:left;list-style:none;padding-left:0;min-width:120px;max-height:122px;box-shadow:1px 1px 6px rgba(0,0,0,.4);background-color:rgba(0,0,0,.25);z-index:1010;overflow-y:auto;overflow-x:hidden;cursor:pointer}.leaflet-control-search .search-tip{margin:2px;padding:2px 4px;display:block;color:#000;background:#eee;border-radius:.25em;text-decoration:none;white-space:nowrap;vertical-align:center}.leaflet-control-search .search-button:hover{background-color:#f4f4f4}.leaflet-control-search .search-tip-select,.leaflet-control-search .search-tip:hover{background-color:#fff}.leaflet-control-search .search-alert{cursor:pointer;clear:both;font-size:.75em;margin-bottom:5px;padding:0 .25em;color:#e00;font-weight:700;border-radius:.25em}
+</style>
+<script>!function(t){var e={};function i(o){if(e[o])return e[o].exports;var s=e[o]={i:o,l:!1,exports:{}};return t[o].call(s.exports,s,s.exports,i),s.l=!0,s.exports}i.m=t,i.c=e,i.d=function(t,e,o){i.o(t,e)||Object.defineProperty(t,e,{configurable:!1,enumerable:!0,get:o})},i.r=function(t){Object.defineProperty(t,"__esModule",{value:!0})},i.n=function(t){var e=t&&t.__esModule?function(){return t.default}:function(){return t};return i.d(e,"a",e),e},i.o=function(t,e){return Object.prototype.hasOwnProperty.call(t,e)},i.p="",i(i.s=4)}([,function(t,e,i){},function(t,e){t.exports=L},function(t,e,o){var s,n,r;n=[o(2)],void 0===(r="function"==typeof(s=function(t){return t.Control.Search=t.Control.extend({includes:"1"===t.version[0]?t.Evented.prototype:t.Mixin.Events,options:{url:"",layer:null,sourceData:null,jsonpParam:null,propertyLoc:"loc",propertyName:"title",formatData:null,filterData:null,moveToLocation:null,buildTip:null,container:"",zoom:null,minLength:1,initial:!0,casesensitive:!1,autoType:!0,delayType:400,tooltipLimit:-1,tipAutoSubmit:!0,firstTipSubmit:!1,autoResize:!0,collapsed:!0,autoCollapse:!1,autoCollapseTime:1200,textErr:"Location not found",textCancel:"Cancel",textPlaceholder:"Search...",hideMarkerOnCollapse:!1,position:"topleft",marker:{icon:!1,animate:!0,circle:{radius:10,weight:3,color:"#e03",stroke:!0,fill:!1}}},_getPath:function(t,e){var i=e.split("."),o=i.pop(),s=i.length,n=i[0],r=1;if(s>0)for(;(t=t[n])&&r<s;)n=i[r++];if(t)return t[o]},_isObject:function(t){return"[object Object]"===Object.prototype.toString.call(t)},initialize:function(e){t.Util.setOptions(this,e||{}),this._inputMinSize=this.options.textPlaceholder?this.options.textPlaceholder.length:10,this._layer=this.options.layer||new t.LayerGroup,this._filterData=this.options.filterData||this._defaultFilterData,this._formatData=this.options.formatData||this._defaultFormatData,this._moveToLocation=this.options.moveToLocation||this._defaultMoveToLocation,this._autoTypeTmp=this.options.autoType,this._countertips=0,this._recordsCache={},this._curReq=null},onAdd:function(e){return this._map=e,this._container=t.DomUtil.create("div","leaflet-control-search"),this._input=this._createInput(this.options.textPlaceholder,"search-input"),this._tooltip=this._createTooltip("search-tooltip"),this._cancel=this._createCancel(this.options.textCancel,"search-cancel"),this._button=this._createButton(this.options.textPlaceholder,"search-button"),this._alert=this._createAlert("search-alert"),!1===this.options.collapsed&&this.expand(this.options.collapsed),this.options.marker&&(this.options.marker instanceof t.Marker||this.options.marker instanceof t.CircleMarker?this._markerSearch=this.options.marker:this._isObject(this.options.marker)&&(this._markerSearch=new t.Control.Search.Marker([0,0],this.options.marker)),this._markerSearch._isMarkerSearch=!0),this.setLayer(this._layer),e.on({resize:this._handleAutoresize},this),this._container},addTo:function(e){return this.options.container?(this._container=this.onAdd(e),this._wrapper=t.DomUtil.get(this.options.container),this._wrapper.style.position="relative",this._wrapper.appendChild(this._container)):t.Control.prototype.addTo.call(this,e),this},onRemove:function(t){this._recordsCache={}},setLayer:function(t){return this._layer=t,this._layer.addTo(this._map),this},showAlert:function(t){var e=this;return t=t||this.options.textErr,this._alert.style.display="block",this._alert.innerHTML=t,clearTimeout(this.timerAlert),this.timerAlert=setTimeout(function(){e.hideAlert()},this.options.autoCollapseTime),this},hideAlert:function(){return this._alert.style.display="none",this},cancel:function(){return this._input.value="",this._handleKeypress({keyCode:8}),this._input.size=this._inputMinSize,this._input.focus(),this._cancel.style.display="none",this._hideTooltip(),this},expand:function(e){return e="boolean"!=typeof e||e,this._input.style.display="block",t.DomUtil.addClass(this._container,"search-exp"),!1!==e&&(this._input.focus(),this._map.on("dragstart click",this.collapse,this)),this.fire("search:expanded"),this},collapse:function(){return this._hideTooltip(),this.cancel(),this._alert.style.display="none",this._input.blur(),this.options.collapsed&&(this._input.style.display="none",this._cancel.style.display="none",t.DomUtil.removeClass(this._container,"search-exp"),this.options.hideMarkerOnCollapse&&this._map.removeLayer(this._markerSearch),this._map.off("dragstart click",this.collapse,this)),this.fire("search:collapsed"),this},collapseDelayed:function(){var t=this;return this.options.autoCollapse?(clearTimeout(this.timerCollapse),this.timerCollapse=setTimeout(function(){t.collapse()},this.options.autoCollapseTime),this):this},collapseDelayedStop:function(){return clearTimeout(this.timerCollapse),this},_createAlert:function(e){var i=t.DomUtil.create("div",e,this._container);return i.style.display="none",t.DomEvent.on(i,"click",t.DomEvent.stop,this).on(i,"click",this.hideAlert,this),i},_createInput:function(e,i){var o=t.DomUtil.create("label",i,this._container),s=t.DomUtil.create("input",i,this._container);return s.type="text",s.size=this._inputMinSize,s.value="",s.autocomplete="off",s.autocorrect="off",s.autocapitalize="off",s.placeholder=e,s.style.display="none",s.role="search",s.id=s.role+s.type+s.size,o.htmlFor=s.id,o.style.display="none",o.value=e,t.DomEvent.disableClickPropagation(s).on(s,"keyup",this._handleKeypress,this).on(s,"blur",this.collapseDelayed,this).on(s,"focus",this.collapseDelayedStop,this),s},_createCancel:function(e,i){var o=t.DomUtil.create("a",i,this._container);return o.href="#",o.title=e,o.style.display="none",o.innerHTML="<span>&otimes;</span>",t.DomEvent.on(o,"click",t.DomEvent.stop,this).on(o,"click",this.cancel,this),o},_createButton:function(e,i){var o=t.DomUtil.create("a",i,this._container);return o.href="#",o.title=e,t.DomEvent.on(o,"click",t.DomEvent.stop,this).on(o,"click",this._handleSubmit,this).on(o,"focus",this.collapseDelayedStop,this).on(o,"blur",this.collapseDelayed,this),o},_createTooltip:function(e){var i=this,o=t.DomUtil.create("ul",e,this._container);return o.style.display="none",t.DomEvent.disableClickPropagation(o).on(o,"blur",this.collapseDelayed,this).on(o,"mousewheel",function(e){i.collapseDelayedStop(),t.DomEvent.stopPropagation(e)},this).on(o,"mouseover",function(t){i.collapseDelayedStop()},this),o},_createTip:function(e,i){var o;if(this.options.buildTip){if("string"==typeof(o=this.options.buildTip.call(this,e,i))){var s=t.DomUtil.create("div");s.innerHTML=o,o=s.firstChild}}else(o=t.DomUtil.create("li","")).innerHTML=e;return t.DomUtil.addClass(o,"search-tip"),o._text=e,this.options.tipAutoSubmit&&t.DomEvent.disableClickPropagation(o).on(o,"click",t.DomEvent.stop,this).on(o,"click",function(t){this._input.value=e,this._handleAutoresize(),this._input.focus(),this._hideTooltip(),this._handleSubmit()},this),o},_getUrl:function(t){return"function"==typeof this.options.url?this.options.url(t):this.options.url},_defaultFilterData:function(t,e){var i,o,s,n={};if(""===(t=t.replace(/[.*+?^${}()|[\]\\]/g,"")))return[];for(var r in i=this.options.initial?"^":"",o=this.options.casesensitive?void 0:"i",s=new RegExp(i+t,o),e)s.test(r)&&(n[r]=e[r]);return n},showTooltip:function(t){if(this._countertips=0,this._tooltip.innerHTML="",this._tooltip.currentSelection=-1,this.options.tooltipLimit)for(var e in t){if(this._countertips===this.options.tooltipLimit)break;this._countertips++,this._tooltip.appendChild(this._createTip(e,t[e]))}return this._countertips>0?(this._tooltip.style.display="block",this._autoTypeTmp&&this._autoType(),this._autoTypeTmp=this.options.autoType):this._hideTooltip(),this._tooltip.scrollTop=0,this._countertips},_hideTooltip:function(){return this._tooltip.style.display="none",this._tooltip.innerHTML="",0},_defaultFormatData:function(e){var i,o=this.options.propertyName,s=this.options.propertyLoc,n={};if(t.Util.isArray(s))for(i in e)n[this._getPath(e[i],o)]=t.latLng(e[i][s[0]],e[i][s[1]]);else for(i in e)n[this._getPath(e[i],o)]=t.latLng(this._getPath(e[i],s));return n},_recordsFromJsonp:function(e,i){t.Control.Search.callJsonp=i;var o=t.DomUtil.create("script","leaflet-search-jsonp",document.getElementsByTagName("body")[0]),s=t.Util.template(this._getUrl(e)+"&"+this.options.jsonpParam+"=L.Control.Search.callJsonp",{s:e});return o.type="text/javascript",o.src=s,{abort:function(){o.parentNode.removeChild(o)}}},_recordsFromAjax:function(e,i){void 0===window.XMLHttpRequest&&(window.XMLHttpRequest=function(){try{return new ActiveXObject("Microsoft.XMLHTTP.6.0")}catch(t){try{return new ActiveXObject("Microsoft.XMLHTTP.3.0")}catch(t){throw new Error("XMLHttpRequest is not supported")}}});var o=t.Browser.ie&&!window.atob&&document.querySelector?new XDomainRequest:new XMLHttpRequest,s=t.Util.template(this._getUrl(e),{s:e});return o.open("GET",s),o.onload=function(){i(JSON.parse(o.responseText))},o.onreadystatechange=function(){4===o.readyState&&200===o.status&&this.onload()},o.send(),o},_searchInLayer:function(e,i,o){var s,n=this;e instanceof t.Control.Search.Marker||((e instanceof t.Marker||e instanceof t.CircleMarker)&&(n._getPath(e.options,o)?((s=e.getLatLng()).layer=e,i[n._getPath(e.options,o)]=s):n._getPath(e.feature.properties,o)&&((s=e.getLatLng()).layer=e,i[n._getPath(e.feature.properties,o)]=s)),e instanceof t.Path||e instanceof t.Polyline||e instanceof t.Polygon?n._getPath(e.options,o)?((s=e.getBounds().getCenter()).layer=e,i[n._getPath(e.options,o)]=s):n._getPath(e.feature.properties,o)&&((s=e.getBounds().getCenter()).layer=e,i[n._getPath(e.feature.properties,o)]=s):e.hasOwnProperty("feature")?e.feature.properties.hasOwnProperty(o)&&(e.getLatLng&&"function"==typeof e.getLatLng?((s=e.getLatLng()).layer=e,i[e.feature.properties[o]]=s):e.getBounds&&"function"==typeof e.getBounds&&((s=e.getBounds().getCenter()).layer=e,i[e.feature.properties[o]]=s)):e instanceof t.LayerGroup&&e.eachLayer(function(t){n._searchInLayer(t,i,o)}))},_recordsFromLayer:function(){var t=this,e={},i=this.options.propertyName;return this._layer.eachLayer(function(o){t._searchInLayer(o,e,i)}),e},_autoType:function(){var t=this._input.value.length,e=this._tooltip.firstChild?this._tooltip.firstChild._text:"",i=e.length;if(0===e.indexOf(this._input.value))if(this._input.value=e,this._handleAutoresize(),this._input.createTextRange){var o=this._input.createTextRange();o.collapse(!0),o.moveStart("character",t),o.moveEnd("character",i),o.select()}else this._input.setSelectionRange?this._input.setSelectionRange(t,i):this._input.selectionStart&&(this._input.selectionStart=t,this._input.selectionEnd=i)},_hideAutoType:function(){var t;if((t=this._input.selection)&&t.empty)t.empty();else if(this._input.createTextRange){(t=this._input.createTextRange()).collapse(!0);var e=this._input.value.length;t.moveStart("character",e),t.moveEnd("character",e),t.select()}else this._input.getSelection&&this._input.getSelection().removeAllRanges(),this._input.selectionStart=this._input.selectionEnd},_handleKeypress:function(t){var e=this;switch(t.keyCode){case 27:this.collapse();break;case 13:(1==this._countertips||this.options.firstTipSubmit&&this._countertips>0)&&-1==this._tooltip.currentSelection&&this._handleArrowSelect(1),this._handleSubmit();break;case 38:this._handleArrowSelect(-1);break;case 40:this._handleArrowSelect(1);break;case 8:case 45:case 46:this._autoTypeTmp=!1;break;case 37:case 39:case 16:case 17:case 35:case 36:break;default:this._input.value.length?this._cancel.style.display="block":this._cancel.style.display="none",this._input.value.length>=this.options.minLength?(clearTimeout(this.timerKeypress),this.timerKeypress=setTimeout(function(){e._fillRecordsCache()},this.options.delayType)):this._hideTooltip()}this._handleAutoresize()},searchText:function(e){var i=e.charCodeAt(e.length);this._input.value=e,this._input.style.display="block",t.DomUtil.addClass(this._container,"search-exp"),this._autoTypeTmp=!1,this._handleKeypress({keyCode:i})},_fillRecordsCache:function(){var e,i=this,o=this._input.value;this._curReq&&this._curReq.abort&&this._curReq.abort(),t.DomUtil.addClass(this._container,"search-load"),this.options.layer?(this._recordsCache=this._recordsFromLayer(),e=this._filterData(this._input.value,this._recordsCache),this.showTooltip(e),t.DomUtil.removeClass(this._container,"search-load")):(this.options.sourceData?this._retrieveData=this.options.sourceData:this.options.url&&(this._retrieveData=this.options.jsonpParam?this._recordsFromJsonp:this._recordsFromAjax),this._curReq=this._retrieveData.call(this,o,function(o){i._recordsCache=i._formatData.call(i,o),e=i.options.sourceData?i._filterData(i._input.value,i._recordsCache):i._recordsCache,i.showTooltip(e),t.DomUtil.removeClass(i._container,"search-load")}))},_handleAutoresize:function(){this._input.style.maxWidth!=this._map._container.offsetWidth&&(this._input.style.maxWidth=t.DomUtil.getStyle(this._map._container,"width")),this.options.autoResize&&this._container.offsetWidth+45<this._map._container.offsetWidth&&(this._input.size=this._input.value.length<this._inputMinSize?this._inputMinSize:this._input.value.length)},_handleArrowSelect:function(e){var o=this._tooltip.hasChildNodes()?this._tooltip.childNodes:[];for(i=0;i<o.length;i++)t.DomUtil.removeClass(o[i],"search-tip-select");if(1==e&&this._tooltip.currentSelection>=o.length-1)t.DomUtil.addClass(o[this._tooltip.currentSelection],"search-tip-select");else if(-1==e&&this._tooltip.currentSelection<=0)this._tooltip.currentSelection=-1;else if("none"!=this._tooltip.style.display){this._tooltip.currentSelection+=e,t.DomUtil.addClass(o[this._tooltip.currentSelection],"search-tip-select"),this._input.value=o[this._tooltip.currentSelection]._text;var s=o[this._tooltip.currentSelection].offsetTop;s+o[this._tooltip.currentSelection].clientHeight>=this._tooltip.scrollTop+this._tooltip.clientHeight?this._tooltip.scrollTop=s-this._tooltip.clientHeight+o[this._tooltip.currentSelection].clientHeight:s<=this._tooltip.scrollTop&&(this._tooltip.scrollTop=s)}},_handleSubmit:function(){if(this._hideAutoType(),this.hideAlert(),this._hideTooltip(),"none"==this._input.style.display)this.expand();else if(""===this._input.value)this.collapse();else{var t=this._getLocation(this._input.value);!1===t?this.showAlert():(this.showLocation(t,this._input.value),this.fire("search:locationfound",{latlng:t,text:this._input.value,layer:t.layer?t.layer:null}))}},_getLocation:function(t){return!!this._recordsCache.hasOwnProperty(t)&&this._recordsCache[t]},_defaultMoveToLocation:function(t,e,i){this.options.zoom?this._map.setView(t,this.options.zoom):this._map.panTo(t)},showLocation:function(t,e){var i=this;return i._map.once("moveend zoomend",function(e){i._markerSearch&&i._markerSearch.addTo(i._map).setLatLng(t)}),i._moveToLocation(t,e,i._map),i.options.autoCollapse&&i.collapse(),i}}),t.Control.Search.Marker=t.Marker.extend({includes:"1"===t.version[0]?t.Evented.prototype:t.Mixin.Events,options:{icon:new t.Icon.Default,animate:!0,circle:{radius:10,weight:3,color:"#e03",stroke:!0,fill:!1}},initialize:function(e,i){t.setOptions(this,i),!0===i.icon&&(i.icon=new t.Icon.Default),t.Marker.prototype.initialize.call(this,e,i),t.Control.Search.prototype._isObject(this.options.circle)&&(this._circleLoc=new t.CircleMarker(e,this.options.circle))},onAdd:function(e){t.Marker.prototype.onAdd.call(this,e),this._circleLoc&&(e.addLayer(this._circleLoc),this.options.animate&&this.animate())},onRemove:function(e){t.Marker.prototype.onRemove.call(this,e),this._circleLoc&&e.removeLayer(this._circleLoc)},setLatLng:function(e){return t.Marker.prototype.setLatLng.call(this,e),this._circleLoc&&this._circleLoc.setLatLng(e),this},_initIcon:function(){this.options.icon&&t.Marker.prototype._initIcon.call(this)},_removeIcon:function(){this.options.icon&&t.Marker.prototype._removeIcon.call(this)},animate:function(){if(this._circleLoc){var t=this._circleLoc,e=parseInt(t._radius/5),i=this.options.circle.radius,o=2*t._radius,s=0;t._timerAnimLoc=setInterval(function(){o-=e+=s+=.5,t.setRadius(o),o<i&&(clearInterval(t._timerAnimLoc),t.setRadius(i))},200)}return this}}),t.Map.addInitHook(function(){this.options.searchControl&&(this.searchControl=t.control.search(this.options.searchControl),this.addControl(this.searchControl))}),t.control.search=function(e){return new t.Control.Search(e)},t.Control.Search})?s.apply(e,n):s)||(t.exports=r)},function(t,e,i){i(3),t.exports=i(1)}]);
+//# sourceMappingURL=lfx-search-prod.js.map</script>
+<script>!function(e){var o={};function t(r){if(o[r])return o[r].exports;var a=o[r]={i:r,l:!1,exports:{}};return e[r].call(a.exports,a,a.exports,t),a.l=!0,a.exports}t.m=e,t.c=o,t.d=function(e,o,r){t.o(e,o)||Object.defineProperty(e,o,{configurable:!1,enumerable:!0,get:r})},t.r=function(e){Object.defineProperty(e,"__esModule",{value:!0})},t.n=function(e){var o=e&&e.__esModule?function(){return e.default}:function(){return e};return t.d(o,"a",o),o},t.o=function(e,o){return Object.prototype.hasOwnProperty.call(e,o)},t.p="",t(t.s=0)}([function(e,o){function t(e){var o={latlng:{}};return o.latlng.lat=e.latlng.lat,o.latlng.lng=e.latlng.lng,$.isEmptyObject(e.title)||(o.title=e.title),$.isEmptyObject(e.layer)||(o.layer=e.layer.toGeoJSON()),o}LeafletWidget.methods.addSearchOSM=function(e){(function(){var o=this;o.searchControlOSM&&(o.searchControlOSM.removeFrom(o),delete o.searchControlOSM),(e=e||{}).textPlaceholder="Search using OSM Geocoder",e.url="https://nominatim.openstreetmap.org/search?format=json&q={s}",e.jsonpParam="json_callback",e.propertyName="display_name",e.propertyLoc=["lat","lon"],e.marker=L.circleMarker([0,0],{radius:30}),e.moveToLocation&&(e.moveToLocation=function(o,t,r){var a=e.zoom||16,n=r.getMaxZoom();n&&a>n&&(a=n),r.setView(o,a)}),o.searchControlOSM=new L.Control.Search(e),o.searchControlOSM.addTo(o),o.searchControlOSM.on("search:locationfound",function(e){HTMLWidgets.shinyMode&&Shiny.onInputChange(o.id+"_search_location_found",t(e))})}).call(this)},LeafletWidget.methods.removeSearchOSM=function(){(function(){this.searchControlOSM&&(this.searchControlOSM.removeFrom(this),delete this.searchControlOSM)}).call(this)},LeafletWidget.methods.addReverseSearchOSM=function(e,o){(function(){var t=this;o=o||"reverse_search_osm",t.layerManager.clearGroup(o);var r=document.getElementById("reverseSearchOSM");t.on("click",function(a){var n=a.latlng,s=L.featureGroup(),i=L.stamp(s);if(e.showSearchLocation){var l=L.marker(a.latlng,{type:"query"}).bindTooltip("lat="+n.lat+" lng="+n.lng+"</P>");L.stamp(l);s.addLayer(l)}var c="https://nominatim.openstreetmap.org/reverse?format=json&polygon_geojson=1&lat="+n.lat+"&lon="+n.lng;$.ajax({url:c,dataType:"json"}).done(function(a){if(!$.isEmptyObject(r)){var c="<div>";c=c+"Display Name: "+(a.display_name?a.display_name:"")+"<br/>",c+="</div>",r.innerHTML=c}var u=L.latLngBounds(L.latLng(a.boundingbox[0],a.boundingbox[2]),L.latLng(a.boundingbox[1],a.boundingbox[3]));if(e.showBounds){var d=L.rectangle(u,{weight:2,color:"#444444",clickable:!1,dashArray:"5,10",type:"result_boundingbox"});L.stamp(d);s.addLayer(d)}if(e.showFeature){var h=L.geoJson(a.geojson,{weight:2,color:"red",dashArray:"5,10",clickable:!1,type:"result_feature",pointToLayer:function(e,o){return L.circleMarker(o,{weight:2,color:"red",dashArray:"5,10",clickable:!1})}});L.stamp(h);s.addLayer(h)}var g=s.getLayers();!$.isEmptyObject(g)&&g.length>=0&&($.isEmptyObject(l)||(l.on("mouseover",function(e){$.isEmptyObject(d)||(d.setStyle({fillOpacity:.5,opacity:.8,weight:5}),d.bringToFront()),$.isEmptyObject(h)||(h.setStyle({fillOpacity:.5,opacity:.8,weight:5}),h.bringToFront())}),l.on("mouseout",function(e){$.isEmptyObject(d)||(d.setStyle({fillOpacity:.2,opacity:.5,weight:2}),d.bringToBack()),$.isEmptyObject(h)||(h.setStyle({fillOpacity:.2,opacity:.5,weight:2}),h.bringToBack())})),t.layerManager.addLayer(s,"search",i,o),e.fitBounds&&t.fitBounds(s.getBounds())),HTMLWidgets.shinyMode&&Shiny.onInputChange(t.id+"_reverse_search_feature_found",{query:{lat:n.lat,lng:n.lng},result:a})})})}).call(this)},LeafletWidget.methods.addSearchGoogle=function(e){(function(){var o=this;o.searchControlGoogle&&(o.searchControlGoogle.removeFrom(o),delete o.searchControlGoogle);var r=new google.maps.Geocoder;(e=e||{}).markerLocation=!0,e.textPlaceholder="Search using Google Geocoder",e.marker=L.circleMarker([0,0],{radius:30}),e.moveToLocation&&(e.moveToLocation=function(o,t,r){var a=e.zoom||16,n=r.getMaxZoom();n&&a>n&&(a=n),r.setView(o,a)}),e.sourceData=function(e,o){r.geocode({address:e},o)},e.formatData=function(e){var o,t,r={};for(var a in e)o=e[a].formatted_address,t=L.latLng(e[a].geometry.location.lat(),e[a].geometry.location.lng()),r[o]=t;return r},o.searchControlGoogle=new L.Control.Search(e),o.searchControlGoogle.addTo(o),o.searchControlGoogle.on("search:locationfound",function(e){HTMLWidgets.shinyMode&&Shiny.onInputChange(o.id+"_search_location_found",t(e))})}).call(this)},LeafletWidget.methods.removeSearchGoogle=function(){(function(){this.searchControlGoogle&&(this.searchControlGoogle.removeFrom(this),delete this.searchControlGoogle)}).call(this)},LeafletWidget.methods.addReverseSearchGoogle=function(e,o){(function(){var t=this;o=o||"reverse_search_google",t.layerManager.clearGroup(o);var r=document.getElementById("reverseSearchGoogle"),a=new google.maps.Geocoder;t.on("click",function(n){var s=n.latlng,i=L.featureGroup(),l=L.stamp(i);if(e.showSearchLocation){var c=L.marker(n.latlng,{type:"query"}).bindTooltip("lat="+s.lat+" lng="+s.lng+"</P>");L.stamp(c);i.addLayer(c)}a.geocode({location:{lat:s.lat,lng:s.lng}},function(a,n){if("OK"===n)if(a[0]){var u=a[0];if(!$.isEmptyObject(r)){var d="<div>";d=d+"Address: "+(u.formatted_address?u.formatted_address:"")+"<br/>",d+="</div>",r.innerHTML=d}var h=L.latLngBounds(L.latLng(u.geometry.viewport.f.f,u.geometry.viewport.b.b),L.latLng(u.geometry.viewport.f.b,u.geometry.viewport.b.f));if(e.showBounds){var g=L.rectangle(h,{weight:2,color:"#444444",clickable:!1,dashArray:"5,10",type:"result_boundingbox"});L.stamp(g);i.addLayer(g)}if(e.showFeature){var m=L.circleMarker(L.latLng(u.geometry.location.lat(),u.geometry.location.lng()),{weight:2,color:"red",dashArray:"5,10",clickable:!1,type:"result_feature"});L.stamp(m);i.addLayer(m)}var f=i.getLayers();!$.isEmptyObject(f)&&f.length>=0&&($.isEmptyObject(c)||(c.on("mouseover",function(e){$.isEmptyObject(g)||(g.setStyle({fillOpacity:.5,opacity:.8,weight:5}),g.bringToFront()),$.isEmptyObject(m)||(m.setStyle({fillOpacity:.5,opacity:.8,weight:5}),m.bringToFront())}),c.on("mouseout",function(e){$.isEmptyObject(g)||(g.setStyle({fillOpacity:.2,opacity:.5,weight:2}),g.bringToBack()),$.isEmptyObject(m)||(m.setStyle({fillOpacity:.2,opacity:.5,weight:2}),m.bringToBack())})),t.layerManager.addLayer(i,"search",l,o),e.fitBounds&&t.fitBounds(i.getBounds())),HTMLWidgets.shinyMode&&Shiny.onInputChange(t.id+"_reverse_search_feature_found",{query:{lat:s.lat,lng:s.lng},result:u})}else $.isEmptyObject(r)||(r.innerHTML="No Results Found"),console.error("No Results Found");else $.isEmptyObject(r)||(r.innerHTML="Reverse Geocoding failed due to: "+n),console.error("Reverse Geocoing failed due to: "+n)})})}).call(this)},LeafletWidget.methods.addSearchUSCensusBureau=function(e){(function(){var o=this;o.searchControlUSCensusBureau&&(o.searchControlUSCensusBureau.removeFrom(o),delete o.searchControlUSCensusBureau),(e=e||{}).url="https://geocoding.geo.census.gov/geocoder/locations/onelineaddress?benchmark=Public_AR_Current&format=jsonp&address={s}",e.textPlaceholder="Search using US Census Bureau",e.jsonpParam="callback",e.formatData=function(e){var o,t,r={};for(var a in e.result.addressMatches)o=e.result.addressMatches[a].matchedAddress,t=L.latLng(e.result.addressMatches[a].coordinates.y,e.result.addressMatches[a].coordinates.x),r[o]=t;return r},e.marker=L.circleMarker([0,0],{radius:30}),e.moveToLocation&&(e.moveToLocation=function(o,t,r){var a=e.zoom||16,n=r.getMaxZoom();n&&a>n&&(a=n),r.setView(o,a)}),o.searchControlUSCensusBureau=new L.Control.Search(e),o.searchControlUSCensusBureau.addTo(o),o.searchControlUSCensusBureau.on("search:locationfound",function(e){HTMLWidgets.shinyMode&&Shiny.onInputChange(o.id+"_search_location_found",t(e))})}).call(this)},LeafletWidget.methods.removeSearchUSCensusBureau=function(){(function(){this.searchControlUSCensusBureau&&(this.searchControlUSCensusBureau.removeFrom(this),delete this.searchControlUSCensusBureau)}).call(this)},LeafletWidget.methods.addSearchFeatures=function(e,o){(function(){var r,a=this;if(a.searchControl&&(a.searchControl.removeFrom(a),delete a.searchControl),(o=o||{}).moveToLocation&&(o.moveToLocation=function(e,t,r){var a=o.zoom||16,n=r.getMaxZoom();n&&a>n&&(a=n),r.setView(e,a)}),L.Util.isArray(e))r=a.layerManager.getLayerGroup("search",!0),a._searchFeatureGroupName="search",$.each(e,function(e,o){var t=a.layerManager.getLayerGroup(o,!1);t?r.addLayer(t):console.warn('Group with ID "'+o+'" not Found, skipping')});else{var n=a.layerManager.getLayerGroup(e,!1);if(!n)throw'Group with ID "'+e+'" not found';r=n,a._searchFeatureGroupName=e}L.stamp(r),o.layer=r,a.searchControl=new L.Control.Search(o),a.searchControl.addTo(a),a.searchControl.on("search:locationfound",function(e){o.openPopup&&e.layer._popup&&e.layer.openPopup(),HTMLWidgets.shinyMode&&Shiny.onInputChange(a.id+"_search_location_found",t(e))})}).call(this)},LeafletWidget.methods.removeSearchFeatures=function(e){(function(){this.searchControl&&(this.searchControl.removeFrom(this),delete this.searchControl),e&&this._searchFeatureGroupName&&(this.layerManager.clearGroup(this._searchFeatureGroupName),delete this._searchFeatureGroupName)}).call(this)}}]);
+//# sourceMappingURL=lfx-search-bindings.js.map</script>
 <style type="text/css">
 
 /*
@@ -6523,8 +7401,8 @@ window.FlexDashboardComponents.push({
 <div class="knitr-options" data-fig-width="576" data-fig-height="460">
 
 </div>
-<div id="htmlwidget-e7e8ee5332e4637fa273" style="width:576px;height:460.8px;" class="leaflet html-widget"></div>
-<script type="application/json" data-for="htmlwidget-e7e8ee5332e4637fa273">{"x":{"options":{"crs":{"crsClass":"L.CRS.EPSG3857","code":null,"proj4def":null,"projectedBounds":null,"options":{}}},"calls":[{"method":"addTiles","args":["//{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",null,null,{"minZoom":0,"maxZoom":18,"tileSize":256,"subdomains":"abc","errorTileUrl":"","tms":false,"noWrap":false,"zoomOffset":0,"zoomReverse":false,"opacity":1,"zIndex":1,"detectRetina":false,"attribution":"&copy; <a href=\"http://openstreetmap.org\">OpenStreetMap<\/a> contributors, <a href=\"http://creativecommons.org/licenses/by-sa/2.0/\">CC-BY-SA<\/a>"}]},{"method":"addCircles","args":[[49.944034,49.944034,49.944063,49.944038,49.944052,49.944129,49.94412,49.944209,49.944276,49.944308,49.944288,49.94437,49.9444,49.944388,49.944444,49.944381,49.944471,49.944317,49.944283,49.944288,49.944316,49.944387,49.944386,49.944348,49.94435,49.944287,49.944453,49.944459,49.944466,49.944497,49.944475,49.944464,49.944488,49.944529,49.94457,49.94457,49.94457,49.944589,49.944624,49.944606,49.944594,49.944628,49.9446,49.944581,49.944634,49.944713,49.944762,49.944792,49.944845,49.944845,49.944845,49.944883,49.944977,49.945032,49.94505,49.945077,49.945146,49.945198,49.945257,49.945276,49.945236,49.945401,49.945406,49.945459,49.945503,49.945556,49.945572,49.945552,49.945541,49.945581,49.945629,49.945688,49.945709,49.945776,49.945851,49.945898,49.945956,49.945956,49.945956,49.946009,49.946052,49.946104,49.946154,49.946217,49.946248,49.946282,49.946309,49.94633,49.946364,49.946405,49.94643,49.946438,49.946411,49.946396,49.94648,49.946514,49.946505,49.946542,49.946577,49.946575,49.946618,49.946664,49.946726,49.946795,49.946837,49.946871,49.946848,49.946796,49.946772,49.94681,49.946882,49.946939,49.946986,49.947027,49.947079,49.947109,49.947173,49.94724,49.947296,49.947346,49.947408,49.947481,49.94753,49.947564,49.947591,49.947633,49.947564,49.947669,49.947717,49.947762,49.947809,49.947814,49.947913,49.947862,49.947837,49.947795,49.947837,49.948169,49.948222,49.94828,49.948328,49.948328,49.948328,49.948306,49.948359,49.948382,49.948382,49.948429,49.948436,49.948491,49.948527,49.948498,49.9486,49.948617,49.948706,49.948744,49.948796,49.948796,49.948849,49.948876,49.948937,49.948898,49.948944,49.948956,49.948987,49.949006,49.94904,49.949047,49.949054,49.949032,49.949015,49.949134,49.94921,49.949095,49.949095,49.949095,49.949137,49.949133,49.949075,49.949062,49.949024,49.94898,49.948942,49.948842,49.94883,49.94878,49.948732,49.948758,49.948736,49.948693,49.948679,49.948672,49.948717,49.948786,49.948817,49.948863,49.948909,49.94897,49.949008,49.949059,49.949105,49.949128,49.949138,49.949138,49.949138,49.949187,49.949298,49.949352,49.949372,49.949404,49.949477,49.949516,49.949544,49.949572,49.949612,49.949693,49.949724,49.949767,49.949817,49.949861,49.949933,49.950014,49.950102,49.950147,49.950223,49.950223,49.95025,49.950259,49.950255,49.950259,49.95024,49.950301,49.950321,49.950357,49.950414,49.950442,49.950475,49.950502,49.950558,49.950587,49.950629,49.950688,49.950751,49.950796,49.950841,49.950801,49.950789,49.950822,49.950864,49.950923,49.950894,49.950991,49.951053,49.951071,49.951115,49.951122,49.951163,49.951198,49.95124,49.951295,49.951298,49.951352,49.951373,49.951373,49.951466,49.951481,49.951443,49.951412,49.951383,49.951344,49.951324,49.951303,49.951264,49.95122,49.951182,49.951129,49.951094,49.951048,49.951026,49.950992,49.951016,49.950985,49.950902,49.950872,49.950823,49.950792,49.950727,49.950727,49.950642,49.95062,49.950571,49.950523,49.950528,49.9505,49.950438,49.950393,49.950345,49.95031,49.950281,49.950246,49.950223,49.95019,49.950181,49.950137,49.95011,49.950096,49.95007,49.950049,49.949993,49.949988,49.949898,49.949892,49.949873,49.949863,49.949816,49.949816,49.949816,49.949836,49.949791,49.949761,49.94974,49.949695,49.949666,49.949629,49.949593,49.949558,49.949545,49.949499,49.949505,49.949449,49.949425,49.94936,49.949353,49.949298,49.949282,49.949337,49.949336,49.949299,49.949243,49.949225,49.949183,49.949139,49.949086,49.949072,49.949027,49.949003,49.948974,49.948923,49.948908,49.948882,49.948835,49.948803,49.948784,49.948768,49.948727,49.948715,49.948686,49.948672,49.948649,49.948649,49.948601,49.948575,49.94856,49.94852,49.948475,49.948488,49.948485,49.948436,49.948411,49.948406,49.948377,49.948365,49.948356,49.948283,49.948239,49.948193,49.94817,49.948124,49.948082,49.948039,49.94801,49.947991,49.947947,49.947897,49.947844,49.94779,49.947765,49.947754,49.947753,49.947723,49.947698,49.947651,49.94763,49.947591,49.947542,49.947518,49.947487,49.947463,49.947447,49.947434,49.947389,49.947366,49.947346,49.947312,49.947291,49.947257,49.947264,49.947339,49.94738,49.947447,49.947481,49.947528,49.947611,49.947656,49.947719,49.947646,49.947684,49.947555,49.947515,49.947482,49.947517,49.947421,49.947585,49.947529,49.94747,49.947441,49.947386,49.947359,49.947315,49.947301,49.947281,49.94726,49.947241,49.947194,49.947181,49.947137,49.947109,49.947068,49.947059,49.947021,49.947032,49.947007,49.946956,49.946906,49.946885,49.946861,49.946845,49.946822,49.946804,49.946785,49.946829,49.946783,49.946841,49.946897,49.946945,49.946974,49.947039,49.947069,49.947084,49.947059,49.947039,49.947033,49.947056,49.947064,49.947064,49.947066,49.947036,49.946995,49.946995,49.946946,49.946954,49.946919,49.946891,49.946846,49.946819,49.946815,49.946811,49.946773,49.946773,49.946782,49.946786,49.946765,49.946767,49.946751,49.946772,49.946783,49.946787,49.946787,49.946803,49.946796,49.94678,49.946772,49.946779,49.946782,49.946769,49.946787,49.946768,49.946695,49.94667,49.946631,49.946587,49.946565,49.946524,49.946502,49.946462,49.946411,49.946353,49.946303,49.946265,49.946216,49.946172,49.946172,49.94615,49.946144,49.946166,49.946077,49.946028,49.945973,49.94603,49.945936,49.945881,49.945872,49.945819,49.9458,49.945764,49.945721,49.945656,49.945668,49.945661,49.945553,49.945625,49.945596,49.945554,49.945504,49.945492,49.945439,49.945405,49.945384,49.945335,49.945334,49.945296,49.945267,49.94527,49.945272,49.945308,49.945342,49.945435,49.945435,49.945435,49.945386,49.945346,49.94535,49.94526,49.945244,49.94521,49.945153,49.945153,49.945153,49.9451,49.945082,49.945017,49.945017,49.944992,49.94498,49.944982,49.944975,49.944939,49.944927,49.944907,49.944907,49.944907,49.944852,49.944802,49.944747,49.944705,49.944639,49.944587,49.944547,49.9445,49.944451,49.944391,49.944326,49.944279,49.944215,49.944166,49.94412,49.944072,49.944078,49.94401,49.943964,49.943912,49.943866,49.943808,49.943742,49.943694,49.943666,49.943613,49.943578,49.943496,49.943442,49.943398,49.943373,49.943344,49.943314,49.943267,49.943195,49.943152,49.943205,49.943301,49.943259,49.943189,49.94317,49.943089,49.943061,49.943012,49.94296,49.942937,49.942902,49.942872,49.942847,49.942808,49.942736,49.942703,49.942648,49.942613,49.942565,49.942549,49.942445,49.942437,49.942487,49.942531,49.942468,49.942375,49.942425,49.942476,49.942497,49.942482,49.94246,49.94244,49.942421,49.942416,49.942406,49.94234,49.942306,49.942255,49.942196,49.942158,49.942125,49.942101,49.942056,49.942023,49.941969,49.941932,49.941884,49.941854,49.941846,49.941807,49.941782,49.941691,49.941624,49.941574,49.941533,49.941481,49.941432,49.941413,49.941353,49.941319,49.941268,49.941227,49.941204,49.94115,49.941087,49.941038,49.940993,49.94094,49.940898,49.940839,49.940846,49.940823,49.940812,49.940818,49.940769,49.940749,49.940738,49.940667,49.940609,49.940559,49.940513,49.940484,49.940454,49.940415,49.940395,49.940365,49.940317,49.940311,49.940283,49.940248,49.940237,49.940211,49.940142,49.940132,49.940094,49.940065,49.940078,49.940059,49.94002,49.939986,49.93997,49.939929,49.939902,49.939856,49.939838,49.939809,49.939746,49.939727,49.939727,49.939668,49.939634,49.939621,49.939612,49.939582,49.939542,49.939521,49.939493,49.939479,49.939456,49.93939,49.93932,49.93928,49.939196,49.939196,49.939196,49.939133,49.93909,49.939027,49.939011,49.939,49.938947,49.938909,49.938863,49.938816,49.938791,49.938747,49.938722,49.938677,49.938625,49.938596,49.938556,49.938512,49.938464,49.938417,49.938365,49.938314,49.938257,49.938185,49.93814,49.938123,49.938123,49.938108,49.938092,49.938224,49.938266,49.938258,49.938254,49.938258,49.93832,49.938251,49.938282,49.938285,49.938297,49.938307,49.938345,49.938355,49.93845,49.938511,49.938558,49.938597,49.938612,49.938632,49.938657,49.938707,49.938734,49.9388,49.93885,49.93878,49.938859,49.938898,49.938911,49.938932,49.938981,49.93902,49.939039,49.939083,49.939113,49.939156,49.939183,49.939228,49.93928,49.939362,49.939378,49.939369,49.93944,49.939437,49.9395,49.93953,49.939551,49.939615,49.939667,49.939689,49.939739,49.939754,49.939795,49.939813,49.939775,49.939891,49.939856,49.939993,49.940041,49.940045,49.94002,49.940051,49.940046,49.940077,49.940105,49.940202,49.940202,49.940202,49.940223,49.940266,49.940297,49.940321,49.940298,49.940363,49.940398,49.940402,49.940403,49.940468,49.940494,49.940502,49.940504,49.940545,49.940568,49.940566,49.940626,49.940666,49.940655,49.940707,49.940704,49.940704,49.940777,49.940796,49.940789,49.940833,49.94084,49.940819,49.940878,49.940919,49.940945,49.941008,49.941045,49.941101,49.941122,49.941171,49.941209,49.941226,49.941246,49.941261,49.941279,49.941287,49.941317,49.941342,49.941367,49.941321,49.941321,49.941321,49.941441,49.941483,49.941518,49.941538,49.941594,49.941624,49.941655,49.941672,49.941716,49.941757,49.941795,49.941811,49.941826,49.941836,49.941836,49.941836,49.941881,49.941971,49.941971,49.941971],[11.569688,11.569688,11.569617,11.569517,11.569445,11.569421,11.569307,11.569269,11.569179,11.569142,11.569047,11.568984,11.568957,11.56887,11.568834,11.568756,11.568653,11.568624,11.568531,11.568382,11.568309,11.568254,11.568158,11.568108,11.568002,11.567967,11.567895,11.567791,11.567693,11.567626,11.567542,11.567429,11.567345,11.567279,11.567235,11.567235,11.567235,11.567167,11.567112,11.567037,11.566972,11.566906,11.566827,11.566776,11.566696,11.566656,11.566604,11.566575,11.566592,11.566592,11.566592,11.566631,11.566636,11.566625,11.566546,11.566473,11.566557,11.566486,11.566487,11.566342,11.566283,11.566326,11.566195,11.566145,11.56625,11.566302,11.566115,11.566035,11.565964,11.565913,11.565915,11.565925,11.565811,11.565776,11.565867,11.565788,11.565795,11.565795,11.565795,11.565768,11.565741,11.565641,11.565622,11.565573,11.565549,11.565491,11.565448,11.565376,11.565321,11.565215,11.565143,11.565051,11.564896,11.564767,11.564748,11.56486,11.564845,11.564804,11.56475,11.56466,11.564602,11.564603,11.564624,11.564761,11.564856,11.564941,11.564706,11.5646,11.56451,11.564471,11.56446,11.564397,11.564389,11.564317,11.564308,11.5643,11.56423,11.564258,11.564269,11.564281,11.564178,11.564129,11.5641,11.564048,11.564005,11.563969,11.564048,11.56394,11.563902,11.563891,11.563867,11.563777,11.563797,11.563936,11.564,11.564064,11.564,11.563723,11.56373,11.563677,11.56382,11.56382,11.56382,11.563901,11.563957,11.563983,11.563983,11.563919,11.563837,11.563799,11.563721,11.563563,11.563548,11.563437,11.563507,11.563459,11.563511,11.563511,11.563454,11.56343,11.563414,11.563333,11.563278,11.563209,11.563137,11.563084,11.563023,11.562905,11.562831,11.562751,11.56269,11.56281,11.562736,11.562647,11.562647,11.562647,11.562585,11.562438,11.562383,11.562315,11.562253,11.562216,11.562157,11.562108,11.561955,11.56189,11.561878,11.561838,11.561776,11.561709,11.561636,11.561595,11.561541,11.561504,11.561486,11.561475,11.561426,11.561382,11.561356,11.561322,11.561322,11.561239,11.56113,11.56113,11.56113,11.56117,11.561145,11.56119,11.561208,11.561084,11.561059,11.561021,11.56101,11.560992,11.560882,11.560878,11.560876,11.560837,11.560759,11.560739,11.560737,11.560747,11.560686,11.56069,11.560682,11.560682,11.560796,11.560832,11.560914,11.560918,11.560985,11.561041,11.56106,11.561124,11.561131,11.561205,11.561253,11.561345,11.561385,11.561446,11.561499,11.561453,11.56145,11.561465,11.561505,11.561616,11.561685,11.561751,11.561802,11.561798,11.561979,11.562034,11.562101,11.562179,11.56224,11.562313,11.562365,11.562409,11.562467,11.562489,11.562581,11.562619,11.5627,11.562778,11.562796,11.56287,11.562881,11.562793,11.562687,11.562649,11.562548,11.562469,11.56242,11.56237,11.562298,11.562265,11.562209,11.562122,11.56208,11.562024,11.562033,11.561975,11.561836,11.561789,11.561712,11.561664,11.561636,11.561528,11.561548,11.561433,11.561409,11.561466,11.561542,11.561599,11.561627,11.561656,11.561683,11.561745,11.561822,11.561887,11.561929,11.561977,11.562057,11.562108,11.562173,11.562205,11.562258,11.56234,11.562434,11.562516,11.562578,11.562662,11.562764,11.562839,11.562863,11.562863,11.562863,11.562926,11.56301,11.563081,11.563155,11.563202,11.563277,11.563324,11.563404,11.563477,11.563506,11.56356,11.56363,11.563678,11.563702,11.563792,11.563867,11.563892,11.563972,11.564022,11.564116,11.564157,11.564171,11.564246,11.564309,11.564358,11.56448,11.564519,11.564596,11.564664,11.564734,11.564781,11.564861,11.564919,11.564946,11.564995,11.56502,11.565051,11.565111,11.56518,11.565246,11.565279,11.565341,11.565341,11.565424,11.56549,11.565531,11.565573,11.565657,11.565739,11.565814,11.565863,11.565928,11.566004,11.566063,11.566137,11.566197,11.566362,11.566428,11.566482,11.566573,11.566635,11.566712,11.566768,11.566836,11.566887,11.566996,11.567025,11.567085,11.567145,11.567216,11.567293,11.567377,11.567444,11.567497,11.567538,11.56756,11.567643,11.567697,11.567766,11.567819,11.567899,11.567951,11.567989,11.568022,11.568082,11.568131,11.56821,11.568256,11.568308,11.568404,11.568525,11.568497,11.568526,11.56854,11.568533,11.568543,11.568533,11.568599,11.568809,11.568871,11.568913,11.569036,11.569091,11.569183,11.569287,11.569078,11.569331,11.569401,11.569482,11.569533,11.569556,11.569625,11.569717,11.569781,11.569841,11.569934,11.569986,11.570064,11.570092,11.570156,11.570214,11.570302,11.57036,11.570428,11.570496,11.570505,11.570596,11.570638,11.570683,11.570709,11.570744,11.570809,11.570879,11.570986,11.571063,11.571083,11.571104,11.571097,11.571129,11.571176,11.571199,11.57128,11.571342,11.571394,11.571477,11.571545,11.57164,11.571718,11.571802,11.571883,11.57192,11.57192,11.571849,11.57195,11.572052,11.572109,11.572154,11.572181,11.572256,11.572307,11.572372,11.572456,11.572539,11.572574,11.572651,11.572728,11.572801,11.572876,11.572926,11.573022,11.573132,11.573201,11.573277,11.573357,11.573398,11.57347,11.573544,11.573638,11.573736,11.573713,11.573756,11.573769,11.57382,11.573867,11.573933,11.573984,11.574009,11.574041,11.574075,11.574069,11.574093,11.574165,11.574216,11.574239,11.57432,11.574394,11.574467,11.57457,11.574586,11.574599,11.574669,11.574798,11.574876,11.574969,11.575052,11.575072,11.575136,11.575201,11.575236,11.575247,11.575375,11.575507,11.575518,11.575624,11.575684,11.575721,11.575738,11.575815,11.575839,11.575928,11.575986,11.576016,11.576089,11.576127,11.576153,11.576228,11.5763,11.576384,11.576456,11.576523,11.576523,11.576523,11.576678,11.576813,11.576893,11.576941,11.577009,11.577139,11.577145,11.577145,11.577145,11.577207,11.577281,11.577273,11.577273,11.577366,11.577405,11.577532,11.577615,11.577671,11.577747,11.577829,11.577829,11.577829,11.577781,11.577771,11.577809,11.577858,11.577869,11.577876,11.577879,11.577874,11.577884,11.577919,11.577917,11.577937,11.577919,11.577949,11.577993,11.57802,11.578125,11.578072,11.578137,11.57812,11.578061,11.578028,11.578,11.577954,11.577925,11.577989,11.578032,11.578021,11.578011,11.578027,11.578034,11.578043,11.578106,11.578142,11.578143,11.578153,11.578174,11.578067,11.577949,11.577826,11.57775,11.57766,11.577633,11.577548,11.577535,11.577527,11.577478,11.577437,11.577473,11.577424,11.577297,11.577188,11.577172,11.577063,11.577042,11.576975,11.577134,11.577307,11.577379,11.577412,11.577531,11.577534,11.57769,11.577758,11.577823,11.577894,11.577972,11.578049,11.578131,11.578248,11.578347,11.578362,11.578433,11.578526,11.578565,11.578625,11.578679,11.578745,11.578752,11.578813,11.578813,11.578754,11.578732,11.578675,11.5786,11.578553,11.578517,11.578465,11.578436,11.578449,11.578402,11.578321,11.5783,11.578218,11.578116,11.57802,11.578012,11.578042,11.578125,11.578153,11.578047,11.577965,11.577971,11.578099,11.57819,11.578189,11.578322,11.578418,11.578517,11.578587,11.578657,11.578738,11.578787,11.578834,11.578892,11.578904,11.578979,11.579027,11.579083,11.579137,11.579162,11.579234,11.579292,11.579386,11.579455,11.579514,11.579585,11.579651,11.579706,11.579793,11.579846,11.579901,11.579977,11.580071,11.580131,11.580208,11.580249,11.580306,11.580366,11.580415,11.580503,11.58057,11.580633,11.580713,11.580795,11.58082,11.580879,11.580968,11.581021,11.581079,11.581113,11.581176,11.581232,11.581301,11.581372,11.581426,11.58147,11.58153,11.581543,11.581543,11.581543,11.581588,11.581624,11.58164,11.581736,11.581813,11.581825,11.581837,11.581814,11.58182,11.58174,11.581699,11.581678,11.58167,11.581661,11.581656,11.581645,11.581613,11.581598,11.581604,11.581654,11.581705,11.581662,11.581442,11.581369,11.581338,11.581257,11.581162,11.581084,11.581221,11.581122,11.581052,11.581016,11.581052,11.581097,11.581204,11.581288,11.581389,11.581457,11.58154,11.581596,11.581686,11.581703,11.581725,11.581744,11.581807,11.581837,11.581915,11.581978,11.582,11.582011,11.582046,11.58207,11.582111,11.582153,11.582189,11.582224,11.582305,11.582343,11.582393,11.582415,11.582432,11.582445,11.582473,11.582489,11.582523,11.582563,11.582553,11.582485,11.582409,11.582385,11.582254,11.582216,11.582154,11.582105,11.582117,11.582095,11.582084,11.582074,11.581996,11.581939,11.581849,11.581733,11.581714,11.581532,11.581616,11.581671,11.581493,11.581391,11.581336,11.581251,11.581174,11.581098,11.5812,11.5812,11.5812,11.581093,11.581061,11.580997,11.580889,11.58082,11.580736,11.580696,11.580623,11.580581,11.580572,11.580499,11.580422,11.580348,11.580284,11.58025,11.580131,11.580092,11.580151,11.57992,11.579882,11.579804,11.579804,11.579681,11.579607,11.579516,11.579468,11.579385,11.579294,11.579241,11.579214,11.57914,11.579136,11.579067,11.578976,11.578911,11.578834,11.578753,11.578723,11.578656,11.578589,11.578515,11.57843,11.578353,11.578273,11.578175,11.578095,11.578095,11.578095,11.578241,11.578267,11.578184,11.578139,11.578082,11.578021,11.577965,11.577873,11.577817,11.577755,11.577677,11.577608,11.577549,11.577495,11.577495,11.577495,11.577106,11.576955,11.576955,11.576955],1,null,null,{"interactive":true,"className":"","stroke":true,"color":"black","weight":5,"opacity":0.9,"fill":true,"fillColor":"black","fillOpacity":0.2},null,null,null,{"interactive":false,"permanent":false,"direction":"auto","opacity":1,"offset":[0,0],"textsize":"10px","textOnly":false,"className":"","sticky":true},null,null]},{"method":"addCircles","args":[49.944,11.569,1,null,null,{"interactive":true,"className":"","stroke":true,"color":"red","weight":5,"opacity":0.5,"fill":true,"fillColor":"red","fillOpacity":0.2},null,null,null,{"interactive":false,"permanent":false,"direction":"auto","opacity":1,"offset":[0,0],"textsize":"10px","textOnly":false,"className":"","sticky":true},null,null]}],"limits":{"lat":[49.938092,49.951481],"lng":[11.560682,11.582563]}},"evals":[],"jsHooks":[]}</script>
+<div id="htmlwidget-8a77000cb61010c4a6ae" style="width:576px;height:460.8px;" class="leaflet html-widget"></div>
+<script type="application/json" data-for="htmlwidget-8a77000cb61010c4a6ae">{"x":{"options":{"crs":{"crsClass":"L.CRS.EPSG3857","code":null,"proj4def":null,"projectedBounds":null,"options":{}}},"calls":[{"method":"addProviderTiles","args":["Esri",null,null,{"errorTileUrl":"","noWrap":false,"detectRetina":false}]},{"method":"addCircles","args":[[49.944034,49.944034,49.944063,49.944038,49.944052,49.944129,49.94412,49.944209,49.944276,49.944308,49.944288,49.94437,49.9444,49.944388,49.944444,49.944381,49.944471,49.944317,49.944283,49.944288,49.944316,49.944387,49.944386,49.944348,49.94435,49.944287,49.944453,49.944459,49.944466,49.944497,49.944475,49.944464,49.944488,49.944529,49.94457,49.94457,49.94457,49.944589,49.944624,49.944606,49.944594,49.944628,49.9446,49.944581,49.944634,49.944713,49.944762,49.944792,49.944845,49.944845,49.944845,49.944883,49.944977,49.945032,49.94505,49.945077,49.945146,49.945198,49.945257,49.945276,49.945236,49.945401,49.945406,49.945459,49.945503,49.945556,49.945572,49.945552,49.945541,49.945581,49.945629,49.945688,49.945709,49.945776,49.945851,49.945898,49.945956,49.945956,49.945956,49.946009,49.946052,49.946104,49.946154,49.946217,49.946248,49.946282,49.946309,49.94633,49.946364,49.946405,49.94643,49.946438,49.946411,49.946396,49.94648,49.946514,49.946505,49.946542,49.946577,49.946575,49.946618,49.946664,49.946726,49.946795,49.946837,49.946871,49.946848,49.946796,49.946772,49.94681,49.946882,49.946939,49.946986,49.947027,49.947079,49.947109,49.947173,49.94724,49.947296,49.947346,49.947408,49.947481,49.94753,49.947564,49.947591,49.947633,49.947564,49.947669,49.947717,49.947762,49.947809,49.947814,49.947913,49.947862,49.947837,49.947795,49.947837,49.948169,49.948222,49.94828,49.948328,49.948328,49.948328,49.948306,49.948359,49.948382,49.948382,49.948429,49.948436,49.948491,49.948527,49.948498,49.9486,49.948617,49.948706,49.948744,49.948796,49.948796,49.948849,49.948876,49.948937,49.948898,49.948944,49.948956,49.948987,49.949006,49.94904,49.949047,49.949054,49.949032,49.949015,49.949134,49.94921,49.949095,49.949095,49.949095,49.949137,49.949133,49.949075,49.949062,49.949024,49.94898,49.948942,49.948842,49.94883,49.94878,49.948732,49.948758,49.948736,49.948693,49.948679,49.948672,49.948717,49.948786,49.948817,49.948863,49.948909,49.94897,49.949008,49.949059,49.949105,49.949128,49.949138,49.949138,49.949138,49.949187,49.949298,49.949352,49.949372,49.949404,49.949477,49.949516,49.949544,49.949572,49.949612,49.949693,49.949724,49.949767,49.949817,49.949861,49.949933,49.950014,49.950102,49.950147,49.950223,49.950223,49.95025,49.950259,49.950255,49.950259,49.95024,49.950301,49.950321,49.950357,49.950414,49.950442,49.950475,49.950502,49.950558,49.950587,49.950629,49.950688,49.950751,49.950796,49.950841,49.950801,49.950789,49.950822,49.950864,49.950923,49.950894,49.950991,49.951053,49.951071,49.951115,49.951122,49.951163,49.951198,49.95124,49.951295,49.951298,49.951352,49.951373,49.951373,49.951466,49.951481,49.951443,49.951412,49.951383,49.951344,49.951324,49.951303,49.951264,49.95122,49.951182,49.951129,49.951094,49.951048,49.951026,49.950992,49.951016,49.950985,49.950902,49.950872,49.950823,49.950792,49.950727,49.950727,49.950642,49.95062,49.950571,49.950523,49.950528,49.9505,49.950438,49.950393,49.950345,49.95031,49.950281,49.950246,49.950223,49.95019,49.950181,49.950137,49.95011,49.950096,49.95007,49.950049,49.949993,49.949988,49.949898,49.949892,49.949873,49.949863,49.949816,49.949816,49.949816,49.949836,49.949791,49.949761,49.94974,49.949695,49.949666,49.949629,49.949593,49.949558,49.949545,49.949499,49.949505,49.949449,49.949425,49.94936,49.949353,49.949298,49.949282,49.949337,49.949336,49.949299,49.949243,49.949225,49.949183,49.949139,49.949086,49.949072,49.949027,49.949003,49.948974,49.948923,49.948908,49.948882,49.948835,49.948803,49.948784,49.948768,49.948727,49.948715,49.948686,49.948672,49.948649,49.948649,49.948601,49.948575,49.94856,49.94852,49.948475,49.948488,49.948485,49.948436,49.948411,49.948406,49.948377,49.948365,49.948356,49.948283,49.948239,49.948193,49.94817,49.948124,49.948082,49.948039,49.94801,49.947991,49.947947,49.947897,49.947844,49.94779,49.947765,49.947754,49.947753,49.947723,49.947698,49.947651,49.94763,49.947591,49.947542,49.947518,49.947487,49.947463,49.947447,49.947434,49.947389,49.947366,49.947346,49.947312,49.947291,49.947257,49.947264,49.947339,49.94738,49.947447,49.947481,49.947528,49.947611,49.947656,49.947719,49.947646,49.947684,49.947555,49.947515,49.947482,49.947517,49.947421,49.947585,49.947529,49.94747,49.947441,49.947386,49.947359,49.947315,49.947301,49.947281,49.94726,49.947241,49.947194,49.947181,49.947137,49.947109,49.947068,49.947059,49.947021,49.947032,49.947007,49.946956,49.946906,49.946885,49.946861,49.946845,49.946822,49.946804,49.946785,49.946829,49.946783,49.946841,49.946897,49.946945,49.946974,49.947039,49.947069,49.947084,49.947059,49.947039,49.947033,49.947056,49.947064,49.947064,49.947066,49.947036,49.946995,49.946995,49.946946,49.946954,49.946919,49.946891,49.946846,49.946819,49.946815,49.946811,49.946773,49.946773,49.946782,49.946786,49.946765,49.946767,49.946751,49.946772,49.946783,49.946787,49.946787,49.946803,49.946796,49.94678,49.946772,49.946779,49.946782,49.946769,49.946787,49.946768,49.946695,49.94667,49.946631,49.946587,49.946565,49.946524,49.946502,49.946462,49.946411,49.946353,49.946303,49.946265,49.946216,49.946172,49.946172,49.94615,49.946144,49.946166,49.946077,49.946028,49.945973,49.94603,49.945936,49.945881,49.945872,49.945819,49.9458,49.945764,49.945721,49.945656,49.945668,49.945661,49.945553,49.945625,49.945596,49.945554,49.945504,49.945492,49.945439,49.945405,49.945384,49.945335,49.945334,49.945296,49.945267,49.94527,49.945272,49.945308,49.945342,49.945435,49.945435,49.945435,49.945386,49.945346,49.94535,49.94526,49.945244,49.94521,49.945153,49.945153,49.945153,49.9451,49.945082,49.945017,49.945017,49.944992,49.94498,49.944982,49.944975,49.944939,49.944927,49.944907,49.944907,49.944907,49.944852,49.944802,49.944747,49.944705,49.944639,49.944587,49.944547,49.9445,49.944451,49.944391,49.944326,49.944279,49.944215,49.944166,49.94412,49.944072,49.944078,49.94401,49.943964,49.943912,49.943866,49.943808,49.943742,49.943694,49.943666,49.943613,49.943578,49.943496,49.943442,49.943398,49.943373,49.943344,49.943314,49.943267,49.943195,49.943152,49.943205,49.943301,49.943259,49.943189,49.94317,49.943089,49.943061,49.943012,49.94296,49.942937,49.942902,49.942872,49.942847,49.942808,49.942736,49.942703,49.942648,49.942613,49.942565,49.942549,49.942445,49.942437,49.942487,49.942531,49.942468,49.942375,49.942425,49.942476,49.942497,49.942482,49.94246,49.94244,49.942421,49.942416,49.942406,49.94234,49.942306,49.942255,49.942196,49.942158,49.942125,49.942101,49.942056,49.942023,49.941969,49.941932,49.941884,49.941854,49.941846,49.941807,49.941782,49.941691,49.941624,49.941574,49.941533,49.941481,49.941432,49.941413,49.941353,49.941319,49.941268,49.941227,49.941204,49.94115,49.941087,49.941038,49.940993,49.94094,49.940898,49.940839,49.940846,49.940823,49.940812,49.940818,49.940769,49.940749,49.940738,49.940667,49.940609,49.940559,49.940513,49.940484,49.940454,49.940415,49.940395,49.940365,49.940317,49.940311,49.940283,49.940248,49.940237,49.940211,49.940142,49.940132,49.940094,49.940065,49.940078,49.940059,49.94002,49.939986,49.93997,49.939929,49.939902,49.939856,49.939838,49.939809,49.939746,49.939727,49.939727,49.939668,49.939634,49.939621,49.939612,49.939582,49.939542,49.939521,49.939493,49.939479,49.939456,49.93939,49.93932,49.93928,49.939196,49.939196,49.939196,49.939133,49.93909,49.939027,49.939011,49.939,49.938947,49.938909,49.938863,49.938816,49.938791,49.938747,49.938722,49.938677,49.938625,49.938596,49.938556,49.938512,49.938464,49.938417,49.938365,49.938314,49.938257,49.938185,49.93814,49.938123,49.938123,49.938108,49.938092,49.938224,49.938266,49.938258,49.938254,49.938258,49.93832,49.938251,49.938282,49.938285,49.938297,49.938307,49.938345,49.938355,49.93845,49.938511,49.938558,49.938597,49.938612,49.938632,49.938657,49.938707,49.938734,49.9388,49.93885,49.93878,49.938859,49.938898,49.938911,49.938932,49.938981,49.93902,49.939039,49.939083,49.939113,49.939156,49.939183,49.939228,49.93928,49.939362,49.939378,49.939369,49.93944,49.939437,49.9395,49.93953,49.939551,49.939615,49.939667,49.939689,49.939739,49.939754,49.939795,49.939813,49.939775,49.939891,49.939856,49.939993,49.940041,49.940045,49.94002,49.940051,49.940046,49.940077,49.940105,49.940202,49.940202,49.940202,49.940223,49.940266,49.940297,49.940321,49.940298,49.940363,49.940398,49.940402,49.940403,49.940468,49.940494,49.940502,49.940504,49.940545,49.940568,49.940566,49.940626,49.940666,49.940655,49.940707,49.940704,49.940704,49.940777,49.940796,49.940789,49.940833,49.94084,49.940819,49.940878,49.940919,49.940945,49.941008,49.941045,49.941101,49.941122,49.941171,49.941209,49.941226,49.941246,49.941261,49.941279,49.941287,49.941317,49.941342,49.941367,49.941321,49.941321,49.941321,49.941441,49.941483,49.941518,49.941538,49.941594,49.941624,49.941655,49.941672,49.941716,49.941757,49.941795,49.941811,49.941826,49.941836,49.941836,49.941836,49.941881,49.941971,49.941971,49.941971],[11.569688,11.569688,11.569617,11.569517,11.569445,11.569421,11.569307,11.569269,11.569179,11.569142,11.569047,11.568984,11.568957,11.56887,11.568834,11.568756,11.568653,11.568624,11.568531,11.568382,11.568309,11.568254,11.568158,11.568108,11.568002,11.567967,11.567895,11.567791,11.567693,11.567626,11.567542,11.567429,11.567345,11.567279,11.567235,11.567235,11.567235,11.567167,11.567112,11.567037,11.566972,11.566906,11.566827,11.566776,11.566696,11.566656,11.566604,11.566575,11.566592,11.566592,11.566592,11.566631,11.566636,11.566625,11.566546,11.566473,11.566557,11.566486,11.566487,11.566342,11.566283,11.566326,11.566195,11.566145,11.56625,11.566302,11.566115,11.566035,11.565964,11.565913,11.565915,11.565925,11.565811,11.565776,11.565867,11.565788,11.565795,11.565795,11.565795,11.565768,11.565741,11.565641,11.565622,11.565573,11.565549,11.565491,11.565448,11.565376,11.565321,11.565215,11.565143,11.565051,11.564896,11.564767,11.564748,11.56486,11.564845,11.564804,11.56475,11.56466,11.564602,11.564603,11.564624,11.564761,11.564856,11.564941,11.564706,11.5646,11.56451,11.564471,11.56446,11.564397,11.564389,11.564317,11.564308,11.5643,11.56423,11.564258,11.564269,11.564281,11.564178,11.564129,11.5641,11.564048,11.564005,11.563969,11.564048,11.56394,11.563902,11.563891,11.563867,11.563777,11.563797,11.563936,11.564,11.564064,11.564,11.563723,11.56373,11.563677,11.56382,11.56382,11.56382,11.563901,11.563957,11.563983,11.563983,11.563919,11.563837,11.563799,11.563721,11.563563,11.563548,11.563437,11.563507,11.563459,11.563511,11.563511,11.563454,11.56343,11.563414,11.563333,11.563278,11.563209,11.563137,11.563084,11.563023,11.562905,11.562831,11.562751,11.56269,11.56281,11.562736,11.562647,11.562647,11.562647,11.562585,11.562438,11.562383,11.562315,11.562253,11.562216,11.562157,11.562108,11.561955,11.56189,11.561878,11.561838,11.561776,11.561709,11.561636,11.561595,11.561541,11.561504,11.561486,11.561475,11.561426,11.561382,11.561356,11.561322,11.561322,11.561239,11.56113,11.56113,11.56113,11.56117,11.561145,11.56119,11.561208,11.561084,11.561059,11.561021,11.56101,11.560992,11.560882,11.560878,11.560876,11.560837,11.560759,11.560739,11.560737,11.560747,11.560686,11.56069,11.560682,11.560682,11.560796,11.560832,11.560914,11.560918,11.560985,11.561041,11.56106,11.561124,11.561131,11.561205,11.561253,11.561345,11.561385,11.561446,11.561499,11.561453,11.56145,11.561465,11.561505,11.561616,11.561685,11.561751,11.561802,11.561798,11.561979,11.562034,11.562101,11.562179,11.56224,11.562313,11.562365,11.562409,11.562467,11.562489,11.562581,11.562619,11.5627,11.562778,11.562796,11.56287,11.562881,11.562793,11.562687,11.562649,11.562548,11.562469,11.56242,11.56237,11.562298,11.562265,11.562209,11.562122,11.56208,11.562024,11.562033,11.561975,11.561836,11.561789,11.561712,11.561664,11.561636,11.561528,11.561548,11.561433,11.561409,11.561466,11.561542,11.561599,11.561627,11.561656,11.561683,11.561745,11.561822,11.561887,11.561929,11.561977,11.562057,11.562108,11.562173,11.562205,11.562258,11.56234,11.562434,11.562516,11.562578,11.562662,11.562764,11.562839,11.562863,11.562863,11.562863,11.562926,11.56301,11.563081,11.563155,11.563202,11.563277,11.563324,11.563404,11.563477,11.563506,11.56356,11.56363,11.563678,11.563702,11.563792,11.563867,11.563892,11.563972,11.564022,11.564116,11.564157,11.564171,11.564246,11.564309,11.564358,11.56448,11.564519,11.564596,11.564664,11.564734,11.564781,11.564861,11.564919,11.564946,11.564995,11.56502,11.565051,11.565111,11.56518,11.565246,11.565279,11.565341,11.565341,11.565424,11.56549,11.565531,11.565573,11.565657,11.565739,11.565814,11.565863,11.565928,11.566004,11.566063,11.566137,11.566197,11.566362,11.566428,11.566482,11.566573,11.566635,11.566712,11.566768,11.566836,11.566887,11.566996,11.567025,11.567085,11.567145,11.567216,11.567293,11.567377,11.567444,11.567497,11.567538,11.56756,11.567643,11.567697,11.567766,11.567819,11.567899,11.567951,11.567989,11.568022,11.568082,11.568131,11.56821,11.568256,11.568308,11.568404,11.568525,11.568497,11.568526,11.56854,11.568533,11.568543,11.568533,11.568599,11.568809,11.568871,11.568913,11.569036,11.569091,11.569183,11.569287,11.569078,11.569331,11.569401,11.569482,11.569533,11.569556,11.569625,11.569717,11.569781,11.569841,11.569934,11.569986,11.570064,11.570092,11.570156,11.570214,11.570302,11.57036,11.570428,11.570496,11.570505,11.570596,11.570638,11.570683,11.570709,11.570744,11.570809,11.570879,11.570986,11.571063,11.571083,11.571104,11.571097,11.571129,11.571176,11.571199,11.57128,11.571342,11.571394,11.571477,11.571545,11.57164,11.571718,11.571802,11.571883,11.57192,11.57192,11.571849,11.57195,11.572052,11.572109,11.572154,11.572181,11.572256,11.572307,11.572372,11.572456,11.572539,11.572574,11.572651,11.572728,11.572801,11.572876,11.572926,11.573022,11.573132,11.573201,11.573277,11.573357,11.573398,11.57347,11.573544,11.573638,11.573736,11.573713,11.573756,11.573769,11.57382,11.573867,11.573933,11.573984,11.574009,11.574041,11.574075,11.574069,11.574093,11.574165,11.574216,11.574239,11.57432,11.574394,11.574467,11.57457,11.574586,11.574599,11.574669,11.574798,11.574876,11.574969,11.575052,11.575072,11.575136,11.575201,11.575236,11.575247,11.575375,11.575507,11.575518,11.575624,11.575684,11.575721,11.575738,11.575815,11.575839,11.575928,11.575986,11.576016,11.576089,11.576127,11.576153,11.576228,11.5763,11.576384,11.576456,11.576523,11.576523,11.576523,11.576678,11.576813,11.576893,11.576941,11.577009,11.577139,11.577145,11.577145,11.577145,11.577207,11.577281,11.577273,11.577273,11.577366,11.577405,11.577532,11.577615,11.577671,11.577747,11.577829,11.577829,11.577829,11.577781,11.577771,11.577809,11.577858,11.577869,11.577876,11.577879,11.577874,11.577884,11.577919,11.577917,11.577937,11.577919,11.577949,11.577993,11.57802,11.578125,11.578072,11.578137,11.57812,11.578061,11.578028,11.578,11.577954,11.577925,11.577989,11.578032,11.578021,11.578011,11.578027,11.578034,11.578043,11.578106,11.578142,11.578143,11.578153,11.578174,11.578067,11.577949,11.577826,11.57775,11.57766,11.577633,11.577548,11.577535,11.577527,11.577478,11.577437,11.577473,11.577424,11.577297,11.577188,11.577172,11.577063,11.577042,11.576975,11.577134,11.577307,11.577379,11.577412,11.577531,11.577534,11.57769,11.577758,11.577823,11.577894,11.577972,11.578049,11.578131,11.578248,11.578347,11.578362,11.578433,11.578526,11.578565,11.578625,11.578679,11.578745,11.578752,11.578813,11.578813,11.578754,11.578732,11.578675,11.5786,11.578553,11.578517,11.578465,11.578436,11.578449,11.578402,11.578321,11.5783,11.578218,11.578116,11.57802,11.578012,11.578042,11.578125,11.578153,11.578047,11.577965,11.577971,11.578099,11.57819,11.578189,11.578322,11.578418,11.578517,11.578587,11.578657,11.578738,11.578787,11.578834,11.578892,11.578904,11.578979,11.579027,11.579083,11.579137,11.579162,11.579234,11.579292,11.579386,11.579455,11.579514,11.579585,11.579651,11.579706,11.579793,11.579846,11.579901,11.579977,11.580071,11.580131,11.580208,11.580249,11.580306,11.580366,11.580415,11.580503,11.58057,11.580633,11.580713,11.580795,11.58082,11.580879,11.580968,11.581021,11.581079,11.581113,11.581176,11.581232,11.581301,11.581372,11.581426,11.58147,11.58153,11.581543,11.581543,11.581543,11.581588,11.581624,11.58164,11.581736,11.581813,11.581825,11.581837,11.581814,11.58182,11.58174,11.581699,11.581678,11.58167,11.581661,11.581656,11.581645,11.581613,11.581598,11.581604,11.581654,11.581705,11.581662,11.581442,11.581369,11.581338,11.581257,11.581162,11.581084,11.581221,11.581122,11.581052,11.581016,11.581052,11.581097,11.581204,11.581288,11.581389,11.581457,11.58154,11.581596,11.581686,11.581703,11.581725,11.581744,11.581807,11.581837,11.581915,11.581978,11.582,11.582011,11.582046,11.58207,11.582111,11.582153,11.582189,11.582224,11.582305,11.582343,11.582393,11.582415,11.582432,11.582445,11.582473,11.582489,11.582523,11.582563,11.582553,11.582485,11.582409,11.582385,11.582254,11.582216,11.582154,11.582105,11.582117,11.582095,11.582084,11.582074,11.581996,11.581939,11.581849,11.581733,11.581714,11.581532,11.581616,11.581671,11.581493,11.581391,11.581336,11.581251,11.581174,11.581098,11.5812,11.5812,11.5812,11.581093,11.581061,11.580997,11.580889,11.58082,11.580736,11.580696,11.580623,11.580581,11.580572,11.580499,11.580422,11.580348,11.580284,11.58025,11.580131,11.580092,11.580151,11.57992,11.579882,11.579804,11.579804,11.579681,11.579607,11.579516,11.579468,11.579385,11.579294,11.579241,11.579214,11.57914,11.579136,11.579067,11.578976,11.578911,11.578834,11.578753,11.578723,11.578656,11.578589,11.578515,11.57843,11.578353,11.578273,11.578175,11.578095,11.578095,11.578095,11.578241,11.578267,11.578184,11.578139,11.578082,11.578021,11.577965,11.577873,11.577817,11.577755,11.577677,11.577608,11.577549,11.577495,11.577495,11.577495,11.577106,11.576955,11.576955,11.576955],1,null,null,{"interactive":true,"className":"","stroke":true,"color":"black","weight":5,"opacity":0.9,"fill":true,"fillColor":"black","fillOpacity":0.2},null,null,null,{"interactive":false,"permanent":false,"direction":"auto","opacity":1,"offset":[0,0],"textsize":"10px","textOnly":false,"className":"","sticky":true},null,null]},{"method":"addCircles","args":[49.944,11.569,1,null,null,{"interactive":true,"className":"","stroke":true,"color":"red","weight":5,"opacity":0.5,"fill":true,"fillColor":"red","fillOpacity":0.2},null,null,null,{"interactive":false,"permanent":false,"direction":"auto","opacity":1,"offset":[0,0],"textsize":"10px","textOnly":false,"className":"","sticky":true},null,null]},{"method":"addSearchOSM","args":[{"url":"","propertyLoc":"loc","propertyName":"title","moveToLocation":true,"zoom":17,"container":"","minLength":2,"initial":true,"casesensitive":false,"autoType":true,"delayType":400,"tooltipLimit":-1,"tipAutoSubmit":true,"firstTipSubmit":false,"autoResize":true,"collapsed":true,"autoCollapse":true,"autoCollapseTime":1200,"textErr":"Location Not Found","textCancel":"Cancel","textPlaceholder":"Search...","position":"topleft","hideMarkerOnCollapse":false}]}],"limits":{"lat":[49.938092,49.951481],"lng":[11.560682,11.582563]}},"evals":[],"jsHooks":[]}</script>
 </div>
 </div>
 
