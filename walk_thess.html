@@ -8,9 +8,9 @@
 
 
 
-<title>My walk Thessaloniki, 8-11-2020</title>
+<title>My walks in Thessaloniki</title>
 
-<meta property="og:title" content="My walk Thessaloniki, 8-11-2020" />
+<meta property="og:title" content="My walks in Thessaloniki" />
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 
@@ -3961,6 +3961,866 @@ function asArray(value) {
 
 },{}]},{},[13]);
 </script>
+<script>(function (root, factory) {
+	if (typeof define === 'function' && define.amd) {
+		// AMD. Register as an anonymous module.
+		define(['leaflet'], factory);
+	} else if (typeof modules === 'object' && module.exports) {
+		// define a Common JS module that relies on 'leaflet'
+		module.exports = factory(require('leaflet'));
+	} else {
+		// Assume Leaflet is loaded into global object L already
+		factory(L);
+	}
+}(this, function (L) {
+	'use strict';
+
+	L.TileLayer.Provider = L.TileLayer.extend({
+		initialize: function (arg, options) {
+			var providers = L.TileLayer.Provider.providers;
+
+			var parts = arg.split('.');
+
+			var providerName = parts[0];
+			var variantName = parts[1];
+
+			if (!providers[providerName]) {
+				throw 'No such provider (' + providerName + ')';
+			}
+
+			var provider = {
+				url: providers[providerName].url,
+				options: providers[providerName].options
+			};
+
+			// overwrite values in provider from variant.
+			if (variantName && 'variants' in providers[providerName]) {
+				if (!(variantName in providers[providerName].variants)) {
+					throw 'No such variant of ' + providerName + ' (' + variantName + ')';
+				}
+				var variant = providers[providerName].variants[variantName];
+				var variantOptions;
+				if (typeof variant === 'string') {
+					variantOptions = {
+						variant: variant
+					};
+				} else {
+					variantOptions = variant.options;
+				}
+				provider = {
+					url: variant.url || provider.url,
+					options: L.Util.extend({}, provider.options, variantOptions)
+				};
+			}
+
+			// replace attribution placeholders with their values from toplevel provider attribution,
+			// recursively
+			var attributionReplacer = function (attr) {
+				if (attr.indexOf('{attribution.') === -1) {
+					return attr;
+				}
+				return attr.replace(/\{attribution.(\w*)\}/g,
+					function (match, attributionName) {
+						return attributionReplacer(providers[attributionName].options.attribution);
+					}
+				);
+			};
+			provider.options.attribution = attributionReplacer(provider.options.attribution);
+
+			// Compute final options combining provider options with any user overrides
+			var layerOpts = L.Util.extend({}, provider.options, options);
+			L.TileLayer.prototype.initialize.call(this, provider.url, layerOpts);
+		}
+	});
+
+	/**
+	 * Definition of providers.
+	 * see http://leafletjs.com/reference.html#tilelayer for options in the options map.
+	 */
+
+	L.TileLayer.Provider.providers = {
+		OpenStreetMap: {
+			url: '//{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+			options: {
+				maxZoom: 19,
+				attribution:
+					'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+			},
+			variants: {
+				Mapnik: {},
+				DE: {
+					url: '//{s}.tile.openstreetmap.de/tiles/osmde/{z}/{x}/{y}.png',
+					options: {
+						maxZoom: 18
+					}
+				},
+				CH: {
+					url: '//tile.osm.ch/switzerland/{z}/{x}/{y}.png',
+					options: {
+						maxZoom: 18,
+						bounds: [[45, 5], [48, 11]]
+					}
+				},
+				France: {
+					url: '//{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png',
+					options: {
+						maxZoom: 20,
+						attribution: '&copy; Openstreetmap France | {attribution.OpenStreetMap}'
+					}
+				},
+				HOT: {
+					url: '//{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png',
+					options: {
+						attribution:
+							'{attribution.OpenStreetMap}, ' +
+							'Tiles style by <a href="https://www.hotosm.org/" target="_blank">Humanitarian OpenStreetMap Team</a> ' +
+							'hosted by <a href="https://openstreetmap.fr/" target="_blank">OpenStreetMap France</a>'
+					}
+				},
+				BZH: {
+					url: '//tile.openstreetmap.bzh/br/{z}/{x}/{y}.png',
+					options: {
+						attribution: '{attribution.OpenStreetMap}, Tiles courtesy of <a href="http://www.openstreetmap.bzh/" target="_blank">Breton OpenStreetMap Team</a>',
+						bounds: [[46.2, -5.5], [50, 0.7]]
+					}
+				}
+			}
+		},
+		OpenSeaMap: {
+			url: '//tiles.openseamap.org/seamark/{z}/{x}/{y}.png',
+			options: {
+				attribution: 'Map data: &copy; <a href="http://www.openseamap.org">OpenSeaMap</a> contributors'
+			}
+		},
+		OpenPtMap: {
+			url: 'http://openptmap.org/tiles/{z}/{x}/{y}.png',
+			options: {
+				maxZoom: 17,
+				attribution: 'Map data: &copy; <a href="http://www.openptmap.org">OpenPtMap</a> contributors'
+			}
+		},
+		OpenTopoMap: {
+			url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
+			options: {
+				maxZoom: 17,
+				attribution: 'Map data: {attribution.OpenStreetMap}, <a href="http://viewfinderpanoramas.org">SRTM</a> | Map style: &copy; <a href="https://opentopomap.org">OpenTopoMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)'
+			}
+		},
+		OpenRailwayMap: {
+			url: 'https://{s}.tiles.openrailwaymap.org/standard/{z}/{x}/{y}.png',
+			options: {
+				maxZoom: 19,
+				attribution: 'Map data: {attribution.OpenStreetMap} | Map style: &copy; <a href="https://www.OpenRailwayMap.org">OpenRailwayMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)'
+			}
+		},
+		OpenFireMap: {
+			url: 'http://openfiremap.org/hytiles/{z}/{x}/{y}.png',
+			options: {
+				maxZoom: 19,
+				attribution: 'Map data: {attribution.OpenStreetMap} | Map style: &copy; <a href="http://www.openfiremap.org">OpenFireMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)'
+			}
+		},
+		SafeCast: {
+			url: '//s3.amazonaws.com/te512.safecast.org/{z}/{x}/{y}.png',
+			options: {
+				maxZoom: 16,
+				attribution: 'Map data: {attribution.OpenStreetMap} | Map style: &copy; <a href="https://blog.safecast.org/about/">SafeCast</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)'
+			}
+		},
+		Thunderforest: {
+			url: 'https://{s}.tile.thunderforest.com/{variant}/{z}/{x}/{y}.png?apikey={apikey}',
+			options: {
+				attribution:
+					'&copy; <a href="http://www.thunderforest.com/">Thunderforest</a>, {attribution.OpenStreetMap}',
+				variant: 'cycle',
+				apikey: '<insert your api key here>',
+				maxZoom: 22
+			},
+			variants: {
+				OpenCycleMap: 'cycle',
+				Transport: {
+					options: {
+						variant: 'transport'
+					}
+				},
+				TransportDark: {
+					options: {
+						variant: 'transport-dark'
+					}
+				},
+				SpinalMap: {
+					options: {
+						variant: 'spinal-map'
+					}
+				},
+				Landscape: 'landscape',
+				Outdoors: 'outdoors',
+				Pioneer: 'pioneer',
+				MobileAtlas: 'mobile-atlas',
+				Neighbourhood: 'neighbourhood'
+			}
+		},
+		OpenMapSurfer: {
+			url: 'https://maps.heigit.org/openmapsurfer/tiles/{variant}/webmercator/{z}/{x}/{y}.png',
+			options: {
+				maxZoom: 19,
+				variant: 'roads',
+				attribution: 'Imagery from <a href="http://giscience.uni-hd.de/">GIScience Research Group @ University of Heidelberg</a> | Map data '
+			},
+			variants: {
+				Roads: {
+					options: {
+						variant: 'roads',
+						attribution: '{attribution.OpenMapSurfer}{attribution.OpenStreetMap}'
+					}
+				},
+				Hybrid: {
+					options: {
+						variant: 'hybrid',
+						attribution: '{attribution.OpenMapSurfer}{attribution.OpenStreetMap}'
+					}
+				},
+				AdminBounds: {
+					options: {
+						variant: 'adminb',
+						maxZoom: 18,
+						attribution: '{attribution.OpenMapSurfer}{attribution.OpenStreetMap}'
+					}
+				},
+				ContourLines: {
+					options: {
+						variant: 'asterc',
+						maxZoom: 18,
+						minZoom: 13,
+						attribution: '{attribution.OpenMapSurfer} <a href="https://lpdaac.usgs.gov/products/aster_policies">ASTER GDEM</a>'
+					}
+				},
+				Hillshade: {
+					options: {
+						variant: 'asterh',
+						maxZoom: 18,
+						attribution: '{attribution.OpenMapSurfer} <a href="https://lpdaac.usgs.gov/products/aster_policies">ASTER GDEM</a>, <a href="http://srtm.csi.cgiar.org/">SRTM</a>'
+					}
+				},
+				ElementsAtRisk: {
+					options: {
+						variant: 'elements_at_risk',
+						attribution: '{attribution.OpenMapSurfer}{attribution.OpenStreetMap}'
+					}
+				}
+			}
+		},
+		Hydda: {
+			url: '//{s}.tile.openstreetmap.se/hydda/{variant}/{z}/{x}/{y}.png',
+			options: {
+				maxZoom: 18,
+				variant: 'full',
+				attribution: 'Tiles courtesy of <a href="http://openstreetmap.se/" target="_blank">OpenStreetMap Sweden</a> &mdash; Map data {attribution.OpenStreetMap}'
+			},
+			variants: {
+				Full: 'full',
+				Base: 'base',
+				RoadsAndLabels: 'roads_and_labels'
+			}
+		},
+		MapBox: {
+			url: 'https://api.tiles.mapbox.com/v4/{id}/{z}/{x}/{y}{r}.png?access_token={accessToken}',
+			options: {
+				attribution:
+					'<a href="https://www.mapbox.com/about/maps/" target="_blank">&copy; Mapbox</a> ' +
+					'{attribution.OpenStreetMap} ' +
+					'<a href="https://www.mapbox.com/map-feedback/" target="_blank">Improve this map</a>',
+				subdomains: 'abcd',
+				id: 'mapbox.streets',
+				accessToken: '<insert your access token here>',
+			}
+		},
+		Stamen: {
+			url: '//stamen-tiles-{s}.a.ssl.fastly.net/{variant}/{z}/{x}/{y}{r}.{ext}',
+			options: {
+				attribution:
+					'Map tiles by <a href="http://stamen.com">Stamen Design</a>, ' +
+					'<a href="http://creativecommons.org/licenses/by/3.0">CC BY 3.0</a> &mdash; ' +
+					'Map data {attribution.OpenStreetMap}',
+				subdomains: 'abcd',
+				minZoom: 0,
+				maxZoom: 20,
+				variant: 'toner',
+				ext: 'png'
+			},
+			variants: {
+				Toner: 'toner',
+				TonerBackground: 'toner-background',
+				TonerHybrid: 'toner-hybrid',
+				TonerLines: 'toner-lines',
+				TonerLabels: 'toner-labels',
+				TonerLite: 'toner-lite',
+				Watercolor: {
+					url: '//stamen-tiles-{s}.a.ssl.fastly.net/{variant}/{z}/{x}/{y}.{ext}',
+					options: {
+						variant: 'watercolor',
+						ext: 'jpg',
+						minZoom: 1,
+						maxZoom: 16
+					}
+				},
+				Terrain: {
+					options: {
+						variant: 'terrain',
+						minZoom: 0,
+						maxZoom: 18
+					}
+				},
+				TerrainBackground: {
+					options: {
+						variant: 'terrain-background',
+						minZoom: 0,
+						maxZoom: 18
+					}
+				},
+				TerrainLabels: {
+					options: {
+						variant: 'terrain-labels',
+						minZoom: 0,
+						maxZoom: 18
+					}
+				},
+				TopOSMRelief: {
+					url: '//stamen-tiles-{s}.a.ssl.fastly.net/{variant}/{z}/{x}/{y}.{ext}',
+					options: {
+						variant: 'toposm-color-relief',
+						ext: 'jpg',
+						bounds: [[22, -132], [51, -56]]
+					}
+				},
+				TopOSMFeatures: {
+					options: {
+						variant: 'toposm-features',
+						bounds: [[22, -132], [51, -56]],
+						opacity: 0.9
+					}
+				}
+			}
+		},
+		TomTom: {
+			url: 'https://{s}.api.tomtom.com/map/1/tile/{variant}/{style}/{z}/{x}/{y}.{ext}?key={apikey}',
+			options: {
+				variant: 'basic',
+				maxZoom: 22,
+				attribution:
+					'<a href="https://tomtom.com" target="_blank">&copy;  1992 - ' + new Date().getFullYear() + ' TomTom.</a> ',
+				subdomains: 'abcd',
+				style: 'main',
+				ext: 'png',
+				apikey: '<insert your API key here>',
+			},
+			variants: {
+				Basic: 'basic',
+				Hybrid: 'hybrid',
+				Labels: 'labels'
+			}
+		},
+		Esri: {
+			url: '//server.arcgisonline.com/ArcGIS/rest/services/{variant}/MapServer/tile/{z}/{y}/{x}',
+			options: {
+				variant: 'World_Street_Map',
+				attribution: 'Tiles &copy; Esri'
+			},
+			variants: {
+				WorldStreetMap: {
+					options: {
+						attribution:
+							'{attribution.Esri} &mdash; ' +
+							'Source: Esri, DeLorme, NAVTEQ, USGS, Intermap, iPC, NRCAN, Esri Japan, METI, Esri China (Hong Kong), Esri (Thailand), TomTom, 2012'
+					}
+				},
+				DeLorme: {
+					options: {
+						variant: 'Specialty/DeLorme_World_Base_Map',
+						minZoom: 1,
+						maxZoom: 11,
+						attribution: '{attribution.Esri} &mdash; Copyright: &copy;2012 DeLorme'
+					}
+				},
+				WorldTopoMap: {
+					options: {
+						variant: 'World_Topo_Map',
+						attribution:
+							'{attribution.Esri} &mdash; ' +
+							'Esri, DeLorme, NAVTEQ, TomTom, Intermap, iPC, USGS, FAO, NPS, NRCAN, GeoBase, Kadaster NL, Ordnance Survey, Esri Japan, METI, Esri China (Hong Kong), and the GIS User Community'
+					}
+				},
+				WorldImagery: {
+					options: {
+						variant: 'World_Imagery',
+						attribution:
+							'{attribution.Esri} &mdash; ' +
+							'Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+					}
+				},
+				WorldTerrain: {
+					options: {
+						variant: 'World_Terrain_Base',
+						maxZoom: 13,
+						attribution:
+							'{attribution.Esri} &mdash; ' +
+							'Source: USGS, Esri, TANA, DeLorme, and NPS'
+					}
+				},
+				WorldShadedRelief: {
+					options: {
+						variant: 'World_Shaded_Relief',
+						maxZoom: 13,
+						attribution: '{attribution.Esri} &mdash; Source: Esri'
+					}
+				},
+				WorldPhysical: {
+					options: {
+						variant: 'World_Physical_Map',
+						maxZoom: 8,
+						attribution: '{attribution.Esri} &mdash; Source: US National Park Service'
+					}
+				},
+				OceanBasemap: {
+					options: {
+						variant: 'Ocean_Basemap',
+						maxZoom: 13,
+						attribution: '{attribution.Esri} &mdash; Sources: GEBCO, NOAA, CHS, OSU, UNH, CSUMB, National Geographic, DeLorme, NAVTEQ, and Esri'
+					}
+				},
+				NatGeoWorldMap: {
+					options: {
+						variant: 'NatGeo_World_Map',
+						maxZoom: 16,
+						attribution: '{attribution.Esri} &mdash; National Geographic, Esri, DeLorme, NAVTEQ, UNEP-WCMC, USGS, NASA, ESA, METI, NRCAN, GEBCO, NOAA, iPC'
+					}
+				},
+				WorldGrayCanvas: {
+					options: {
+						variant: 'Canvas/World_Light_Gray_Base',
+						maxZoom: 16,
+						attribution: '{attribution.Esri} &mdash; Esri, DeLorme, NAVTEQ'
+					}
+				}
+			}
+		},
+		OpenWeatherMap: {
+			url: 'http://{s}.tile.openweathermap.org/map/{variant}/{z}/{x}/{y}.png?appid={apiKey}',
+			options: {
+				maxZoom: 19,
+				attribution: 'Map data &copy; <a href="http://openweathermap.org">OpenWeatherMap</a>',
+				apiKey:'<insert your api key here>',
+				opacity: 0.5
+			},
+			variants: {
+				Clouds: 'clouds',
+				CloudsClassic: 'clouds_cls',
+				Precipitation: 'precipitation',
+				PrecipitationClassic: 'precipitation_cls',
+				Rain: 'rain',
+				RainClassic: 'rain_cls',
+				Pressure: 'pressure',
+				PressureContour: 'pressure_cntr',
+				Wind: 'wind',
+				Temperature: 'temp',
+				Snow: 'snow'
+			}
+		},
+		HERE: {
+			/*
+			 * HERE maps, formerly Nokia maps.
+			 * These basemaps are free, but you need an API key. Please sign up at
+			 * https://developer.here.com/plans
+			 */
+			url:
+				'https://{s}.{base}.maps.api.here.com/maptile/2.1/' +
+				'{type}/{mapID}/{variant}/{z}/{x}/{y}/{size}/{format}?' +
+				'app_id={app_id}&app_code={app_code}&lg={language}',
+			options: {
+				attribution:
+					'Map &copy; 1987-' + new Date().getFullYear() + ' <a href="http://developer.here.com">HERE</a>',
+				subdomains: '1234',
+				mapID: 'newest',
+				'app_id': '<insert your app_id here>',
+				'app_code': '<insert your app_code here>',
+				base: 'base',
+				variant: 'normal.day',
+				maxZoom: 20,
+				type: 'maptile',
+				language: 'eng',
+				format: 'png8',
+				size: '256'
+			},
+			variants: {
+				normalDay: 'normal.day',
+				normalDayCustom: 'normal.day.custom',
+				normalDayGrey: 'normal.day.grey',
+				normalDayMobile: 'normal.day.mobile',
+				normalDayGreyMobile: 'normal.day.grey.mobile',
+				normalDayTransit: 'normal.day.transit',
+				normalDayTransitMobile: 'normal.day.transit.mobile',
+				normalDayTraffic: {
+					options: {
+						variant: 'normal.traffic.day',
+						base: 'traffic',
+						type: 'traffictile'
+					}
+				},
+				normalNight: 'normal.night',
+				normalNightMobile: 'normal.night.mobile',
+				normalNightGrey: 'normal.night.grey',
+				normalNightGreyMobile: 'normal.night.grey.mobile',
+				normalNightTransit: 'normal.night.transit',
+				normalNightTransitMobile: 'normal.night.transit.mobile',
+				reducedDay: 'reduced.day',
+				reducedNight: 'reduced.night',
+				basicMap: {
+					options: {
+						type: 'basetile'
+					}
+				},
+				mapLabels: {
+					options: {
+						type: 'labeltile',
+						format: 'png'
+					}
+				},
+				trafficFlow: {
+					options: {
+						base: 'traffic',
+						type: 'flowtile'
+					}
+				},
+				carnavDayGrey: 'carnav.day.grey',
+				hybridDay: {
+					options: {
+						base: 'aerial',
+						variant: 'hybrid.day'
+					}
+				},
+				hybridDayMobile: {
+					options: {
+						base: 'aerial',
+						variant: 'hybrid.day.mobile'
+					}
+				},
+				hybridDayTransit: {
+					options: {
+						base: 'aerial',
+						variant: 'hybrid.day.transit'
+					}
+				},
+				hybridDayGrey: {
+					options: {
+						base: 'aerial',
+						variant: 'hybrid.grey.day'
+					}
+				},
+				hybridDayTraffic: {
+					options: {
+						variant: 'hybrid.traffic.day',
+						base: 'traffic',
+						type: 'traffictile'
+					}
+				},
+				pedestrianDay: 'pedestrian.day',
+				pedestrianNight: 'pedestrian.night',
+				satelliteDay: {
+					options: {
+						base: 'aerial',
+						variant: 'satellite.day'
+					}
+				},
+				terrainDay: {
+					options: {
+						base: 'aerial',
+						variant: 'terrain.day'
+					}
+				},
+				terrainDayMobile: {
+					options: {
+						base: 'aerial',
+						variant: 'terrain.day.mobile'
+					}
+				}
+			}
+		},
+		FreeMapSK: {
+			url: 'http://t{s}.freemap.sk/T/{z}/{x}/{y}.jpeg',
+			options: {
+				minZoom: 8,
+				maxZoom: 16,
+				subdomains: '1234',
+				bounds: [[47.204642, 15.996093], [49.830896, 22.576904]],
+				attribution:
+					'{attribution.OpenStreetMap}, vizualization CC-By-SA 2.0 <a href="http://freemap.sk">Freemap.sk</a>'
+			}
+		},
+		MtbMap: {
+			url: 'http://tile.mtbmap.cz/mtbmap_tiles/{z}/{x}/{y}.png',
+			options: {
+				attribution:
+					'{attribution.OpenStreetMap} &amp; USGS'
+			}
+		},
+		CartoDB: {
+			url: 'https://{s}.basemaps.cartocdn.com/{variant}/{z}/{x}/{y}{r}.png',
+			options: {
+				attribution: '{attribution.OpenStreetMap} &copy; <a href="https://carto.com/attributions">CARTO</a>',
+				subdomains: 'abcd',
+				maxZoom: 19,
+				variant: 'light_all'
+			},
+			variants: {
+				Positron: 'light_all',
+				PositronNoLabels: 'light_nolabels',
+				PositronOnlyLabels: 'light_only_labels',
+				DarkMatter: 'dark_all',
+				DarkMatterNoLabels: 'dark_nolabels',
+				DarkMatterOnlyLabels: 'dark_only_labels',
+				Voyager: 'rastertiles/voyager',
+				VoyagerNoLabels: 'rastertiles/voyager_nolabels',
+				VoyagerOnlyLabels: 'rastertiles/voyager_only_labels',
+				VoyagerLabelsUnder: 'rastertiles/voyager_labels_under'
+			}
+		},
+		HikeBike: {
+			url: 'https://tiles.wmflabs.org/{variant}/{z}/{x}/{y}.png',
+			options: {
+				maxZoom: 19,
+				attribution: '{attribution.OpenStreetMap}',
+				variant: 'hikebike'
+			},
+			variants: {
+				HikeBike: {},
+				HillShading: {
+					options: {
+						maxZoom: 15,
+						variant: 'hillshading'
+					}
+				}
+			}
+		},
+		BasemapAT: {
+			url: '//maps{s}.wien.gv.at/basemap/{variant}/normal/google3857/{z}/{y}/{x}.{format}',
+			options: {
+				maxZoom: 19,
+				attribution: 'Datenquelle: <a href="https://www.basemap.at">basemap.at</a>',
+				subdomains: ['', '1', '2', '3', '4'],
+				format: 'png',
+				bounds: [[46.358770, 8.782379], [49.037872, 17.189532]],
+				variant: 'geolandbasemap'
+			},
+			variants: {
+				basemap: {
+					options: {
+						maxZoom: 20, // currently only in Vienna
+						variant: 'geolandbasemap'
+					}
+				},
+				grau: 'bmapgrau',
+				overlay: 'bmapoverlay',
+				highdpi: {
+					options: {
+						variant: 'bmaphidpi',
+						format: 'jpeg'
+					}
+				},
+				orthofoto: {
+					options: {
+						maxZoom: 20, // currently only in Vienna
+						variant: 'bmaporthofoto30cm',
+						format: 'jpeg'
+					}
+				}
+			}
+		},
+		nlmaps: {
+			url: '//geodata.nationaalgeoregister.nl/tiles/service/wmts/{variant}/EPSG:3857/{z}/{x}/{y}.png',
+			options: {
+				minZoom: 6,
+				maxZoom: 19,
+				bounds: [[50.5, 3.25], [54, 7.6]],
+				attribution: 'Kaartgegevens &copy; <a href="kadaster.nl">Kadaster</a>'
+			},
+			variants: {
+				'standaard': 'brtachtergrondkaart',
+				'pastel': 'brtachtergrondkaartpastel',
+				'grijs': 'brtachtergrondkaartgrijs',
+				'luchtfoto': {
+					'url': '//geodata.nationaalgeoregister.nl/luchtfoto/rgb/wmts/1.0.0/2016_ortho25/EPSG:3857/{z}/{x}/{y}.png',
+				}
+			}
+		},
+		NASAGIBS: {
+			url: 'https://map1.vis.earthdata.nasa.gov/wmts-webmerc/{variant}/default/{time}/{tilematrixset}{maxZoom}/{z}/{y}/{x}.{format}',
+			options: {
+				attribution:
+					'Imagery provided by services from the Global Imagery Browse Services (GIBS), operated by the NASA/GSFC/Earth Science Data and Information System ' +
+					'(<a href="https://earthdata.nasa.gov">ESDIS</a>) with funding provided by NASA/HQ.',
+				bounds: [[-85.0511287776, -179.999999975], [85.0511287776, 179.999999975]],
+				minZoom: 1,
+				maxZoom: 9,
+				format: 'jpg',
+				time: '',
+				tilematrixset: 'GoogleMapsCompatible_Level'
+			},
+			variants: {
+				ModisTerraTrueColorCR: 'MODIS_Terra_CorrectedReflectance_TrueColor',
+				ModisTerraBands367CR: 'MODIS_Terra_CorrectedReflectance_Bands367',
+				ViirsEarthAtNight2012: {
+					options: {
+						variant: 'VIIRS_CityLights_2012',
+						maxZoom: 8
+					}
+				},
+				ModisTerraLSTDay: {
+					options: {
+						variant: 'MODIS_Terra_Land_Surface_Temp_Day',
+						format: 'png',
+						maxZoom: 7,
+						opacity: 0.75
+					}
+				},
+				ModisTerraSnowCover: {
+					options: {
+						variant: 'MODIS_Terra_Snow_Cover',
+						format: 'png',
+						maxZoom: 8,
+						opacity: 0.75
+					}
+				},
+				ModisTerraAOD: {
+					options: {
+						variant: 'MODIS_Terra_Aerosol',
+						format: 'png',
+						maxZoom: 6,
+						opacity: 0.75
+					}
+				},
+				ModisTerraChlorophyll: {
+					options: {
+						variant: 'MODIS_Terra_Chlorophyll_A',
+						format: 'png',
+						maxZoom: 7,
+						opacity: 0.75
+					}
+				}
+			}
+		},
+		NLS: {
+			// NLS maps are copyright National library of Scotland.
+			// http://maps.nls.uk/projects/api/index.html
+			// Please contact NLS for anything other than non-commercial low volume usage
+			//
+			// Map sources: Ordnance Survey 1:1m to 1:63K, 1920s-1940s
+			//   z0-9  - 1:1m
+			//  z10-11 - quarter inch (1:253440)
+			//  z12-18 - one inch (1:63360)
+			url: '//nls-{s}.tileserver.com/nls/{z}/{x}/{y}.jpg',
+			options: {
+				attribution: '<a href="http://geo.nls.uk/maps/">National Library of Scotland Historic Maps</a>',
+				bounds: [[49.6, -12], [61.7, 3]],
+				minZoom: 1,
+				maxZoom: 18,
+				subdomains: '0123',
+			}
+		},
+		JusticeMap: {
+			// Justice Map (http://www.justicemap.org/)
+			// Visualize race and income data for your community, county and country.
+			// Includes tools for data journalists, bloggers and community activists.
+			url: 'http://www.justicemap.org/tile/{size}/{variant}/{z}/{x}/{y}.png',
+			options: {
+				attribution: '<a href="http://www.justicemap.org/terms.php">Justice Map</a>',
+				// one of 'county', 'tract', 'block'
+				size: 'county',
+				// Bounds for USA, including Alaska and Hawaii
+				bounds: [[14, -180], [72, -56]]
+			},
+			variants: {
+				income: 'income',
+				americanIndian: 'indian',
+				asian: 'asian',
+				black: 'black',
+				hispanic: 'hispanic',
+				multi: 'multi',
+				nonWhite: 'nonwhite',
+				white: 'white',
+				plurality: 'plural'
+			}
+		},
+		Wikimedia: {
+			url: 'https://maps.wikimedia.org/osm-intl/{z}/{x}/{y}{r}.png',
+			options: {
+				attribution: '<a href="https://wikimediafoundation.org/wiki/Maps_Terms_of_Use">Wikimedia</a>',
+				minZoom: 1,
+				maxZoom: 19
+			}
+		},
+		GeoportailFrance: {
+			url: 'https://wxs.ign.fr/{apikey}/geoportail/wmts?REQUEST=GetTile&SERVICE=WMTS&VERSION=1.0.0&STYLE={style}&TILEMATRIXSET=PM&FORMAT={format}&LAYER={variant}&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}',
+			options: {
+				attribution: '<a target="_blank" href="https://www.geoportail.gouv.fr/">Geoportail France</a>',
+				bounds: [[-75, -180], [81, 180]],
+				minZoom: 2,
+				maxZoom: 18,
+				// Get your own geoportail apikey here : http://professionnels.ign.fr/ign/contrats/
+				// NB : 'choisirgeoportail' is a demonstration key that comes with no guarantee
+				apikey: 'choisirgeoportail',
+				format: 'image/jpeg',
+				style : 'normal',
+				variant: 'GEOGRAPHICALGRIDSYSTEMS.MAPS.SCAN-EXPRESS.STANDARD'
+			},
+			variants: {
+				parcels: {
+					options : {
+						variant: 'CADASTRALPARCELS.PARCELS',
+						maxZoom: 20,
+						style : 'bdparcellaire',
+						format: 'image/png'
+					}
+				},
+				ignMaps: 'GEOGRAPHICALGRIDSYSTEMS.MAPS',
+				maps: 'GEOGRAPHICALGRIDSYSTEMS.MAPS.SCAN-EXPRESS.STANDARD',
+				orthos: {
+					options: {
+						maxZoom: 19,
+						variant: 'ORTHOIMAGERY.ORTHOPHOTOS'
+					}
+				}
+			}
+		},
+		OneMapSG: {
+			url: '//maps-{s}.onemap.sg/v3/{variant}/{z}/{x}/{y}.png',
+			options: {
+				variant: 'Default',
+				minZoom: 11,
+				maxZoom: 18,
+				bounds: [[1.56073, 104.11475], [1.16, 103.502]],
+				attribution: '<img src="https://docs.onemap.sg/maps/images/oneMap64-01.png" style="height:20px;width:20px;"/> New OneMap | Map data &copy; contributors, <a href="http://SLA.gov.sg">Singapore Land Authority</a>'
+			},
+			variants: {
+				Default: 'Default',
+				Night: 'Night',
+				Original: 'Original',
+				Grey: 'Grey',
+				LandLot: 'LandLot'
+			}
+		}
+	};
+
+	L.tileLayer.provider = function (provider, options) {
+		return new L.TileLayer.Provider(provider, options);
+	};
+
+	return L;
+}));
+</script>
+<script>LeafletWidget.methods.addProviderTiles = function(provider, layerId, group, options) {
+  this.layerManager.addLayer(L.tileLayer.provider(provider, options), "tile", layerId, group);
+};
+</script>
 <script>Fuse=function(e){var t={};function r(n){if(t[n])return t[n].exports;var o=t[n]={i:n,l:!1,exports:{}};return e[n].call(o.exports,o,o.exports,r),o.l=!0,o.exports}return r.m=e,r.c=t,r.d=function(e,t,n){r.o(e,t)||Object.defineProperty(e,t,{configurable:!1,enumerable:!0,get:n})},r.r=function(e){Object.defineProperty(e,"__esModule",{value:!0})},r.n=function(e){var t=e&&e.__esModule?function(){return e.default}:function(){return e};return r.d(t,"a",t),t},r.o=function(e,t){return Object.prototype.hasOwnProperty.call(e,t)},r.p="",r(r.s=0)}([function(e,t,r){
 /*!
  * Fuse.js v3.2.0 - Lightweight fuzzy-search (http://fusejs.io)
@@ -4727,7 +5587,7 @@ html, body {
   
 </span>
 <span class="navbar-brand">
-  My walk Thessaloniki, 8-11-2020
+  My walks in Thessaloniki
   <span class="navbar-author">
         </span>
 </span>
@@ -6541,8 +7401,8 @@ window.FlexDashboardComponents.push({
 <div class="knitr-options" data-fig-width="576" data-fig-height="460">
 
 </div>
-<div id="htmlwidget-3e9ce375267762332c6e" style="width:576px;height:460.8px;" class="leaflet html-widget"></div>
-<script type="application/json" data-for="htmlwidget-3e9ce375267762332c6e">{"x":{"options":{"crs":{"crsClass":"L.CRS.EPSG3857","code":null,"proj4def":null,"projectedBounds":null,"options":{}}},"calls":[{"method":"addTiles","args":["//{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",null,null,{"minZoom":0,"maxZoom":18,"tileSize":256,"subdomains":"abc","errorTileUrl":"","tms":false,"noWrap":false,"zoomOffset":0,"zoomReverse":false,"opacity":1,"zIndex":1,"detectRetina":false,"attribution":"&copy; <a href=\"http://openstreetmap.org\">OpenStreetMap<\/a> contributors, <a href=\"http://creativecommons.org/licenses/by-sa/2.0/\">CC-BY-SA<\/a>"}]},{"method":"addCircles","args":[[40.64306,40.643048,40.642992,40.642905,40.64283,40.642778,40.642732,40.642657,40.642578,40.642505,40.642443,40.642365,40.642288,40.642205,40.642125,40.642047,40.64198,40.641895,40.641822,40.641745,40.641663,40.641588,40.641517,40.64146,40.641377,40.641307,40.641255,40.641202,40.641132,40.641068,40.641003,40.640955,40.64087,40.640803,40.64079,40.640718,40.64063,40.640553,40.640482,40.640418,40.640357,40.640308,40.640262,40.64022,40.64014,40.640052,40.639977,40.639902,40.639837,40.639827,40.63978,40.63971,40.639643,40.639577,40.639503,40.639422,40.639358,40.63929,40.639237,40.639188,40.639117,40.639045,40.638978,40.638922,40.638857,40.6388,40.63874,40.638682,40.63862,40.638553,40.638493,40.638423,40.638355,40.638295,40.638235,40.638162,40.638093,40.63802,40.63796,40.637897,40.63781,40.637735,40.63766,40.637605,40.637543,40.637482,40.637418,40.637342,40.63727,40.637208,40.637137,40.637058,40.636977,40.636913,40.636862,40.636822,40.63678,40.636703,40.636628,40.636565,40.636497,40.636423,40.636342,40.63627,40.636208,40.636142,40.636077,40.636005,40.635933,40.635865,40.635795,40.635727,40.635657,40.635585,40.635507,40.635427,40.635342,40.635272,40.635187,40.635107,40.635027,40.634958,40.634882,40.634812,40.634747,40.634702,40.634657,40.634618,40.634575,40.634503,40.634433,40.63435,40.634278,40.634205,40.634122,40.634042,40.633978,40.633915,40.633837,40.633783,40.633715,40.633643,40.63358,40.63351,40.633435,40.633365,40.633298,40.63324,40.633185,40.63312,40.633047,40.632978,40.632913,40.632842,40.632787,40.632723,40.632655,40.632582,40.632503,40.632447,40.63238,40.63232,40.632257,40.632193,40.632132,40.63207,40.631993,40.631923,40.631865,40.63179,40.631713,40.631638,40.631585,40.631528,40.63145,40.631387,40.63132,40.631248,40.631175,40.631103,40.631057,40.630977,40.63089,40.630803,40.630718,40.630637,40.630552,40.630475,40.630415,40.630347,40.630258,40.63018,40.630093,40.63001,40.629922,40.629842,40.629753,40.629678,40.629603,40.629517,40.629443,40.629358,40.629282,40.629203,40.62912,40.629038,40.628957,40.628877,40.628795,40.628707,40.628622,40.628535,40.62845,40.628418,40.628378,40.628305,40.628223,40.628135,40.628055,40.62798,40.627903,40.627817,40.627733,40.627658,40.62758,40.6275,40.627413,40.62734,40.627263,40.627187,40.62711,40.627035,40.62695,40.626872,40.626793,40.62671,40.62663,40.62658,40.626537,40.626572,40.626577,40.62655,40.626497,40.626433,40.626398,40.62639,40.626397,40.62639,40.626397,40.626402,40.626407,40.626392,40.626378,40.626357,40.626365,40.626382,40.62638,40.626372,40.62636,40.62635,40.626343,40.626342,40.62636,40.626367,40.626368,40.62638,40.626407,40.62645,40.626467,40.62647,40.626493,40.626522,40.626538,40.62651,40.626455,40.626393,40.626317,40.626232,40.626157,40.626087,40.62602,40.625953,40.625887,40.62582,40.625752,40.625685,40.625632,40.625562,40.625487,40.62544,40.62539,40.625307,40.625385,40.625472,40.625557,40.625637,40.625717,40.625793,40.625878,40.625962,40.62604,40.626122,40.626197,40.626272,40.626348,40.626425,40.626502,40.626572,40.626652,40.626735,40.626807,40.62689,40.626965,40.62705,40.627137,40.627222,40.627305,40.627375,40.627445,40.627505,40.627568,40.627627,40.627685,40.62773,40.627795,40.62785,40.627903,40.62795,40.627993,40.628042,40.628103,40.62816,40.628202,40.628263,40.62832,40.628392,40.628433,40.628505,40.628568,40.628608,40.628662,40.62872,40.628762,40.628812,40.628873,40.628923,40.628982,40.629038,40.629097,40.629153,40.629222,40.629252,40.629298,40.629357,40.62942,40.629482,40.629547,40.629587,40.629642,40.629703,40.629752,40.629822,40.629883,40.62993,40.629978,40.63004,40.630093,40.630145,40.630195,40.630253,40.630303,40.630363,40.630405,40.63046,40.630515,40.630582,40.630653,40.630718,40.630762,40.630795,40.630835,40.630882,40.630938,40.630998,40.631045,40.631103,40.631145,40.631185,40.631235,40.6313,40.631353,40.631403,40.631442,40.631493,40.63154,40.63159,40.631637,40.631685,40.631718,40.631765,40.631815,40.63187,40.631948,40.632037,40.632105,40.632158,40.632207,40.63226,40.632312,40.632365,40.632413,40.632473,40.632528,40.632585,40.632632,40.632682,40.63273,40.632775,40.632823,40.632877,40.632933,40.632993,40.63305,40.633098,40.633137,40.633195,40.633237,40.633282,40.633345,40.633427,40.633505,40.633572,40.633633,40.633703,40.633772,40.633847,40.633915,40.633977,40.634042,40.634115,40.634192,40.634275,40.63436,40.634435,40.634503,40.634565,40.634627,40.634675,40.634692,40.634693,40.634723,40.634798,40.634872,40.634943,40.635012,40.635087,40.635143,40.635188,40.635247,40.635283,40.63535,40.635413,40.635478,40.635565,40.635603,40.635652,40.635712,40.635768,40.635807,40.635853,40.63592,40.636007,40.636092,40.636167,40.636252,40.636328,40.636397,40.636447,40.636517,40.636595,40.636667,40.636733,40.636808,40.636872,40.636908,40.636958,40.636963,40.636963,40.63703,40.637112,40.637197,40.63726,40.637318,40.637357,40.637395,40.637458,40.637533,40.637607,40.63768,40.637753,40.63783,40.637913,40.63799,40.638068,40.638128,40.638202,40.63826,40.638307,40.638352,40.638422,40.638507,40.638585,40.638658,40.638727,40.63879,40.638858,40.638927,40.639003,40.639058,40.639122,40.639205,40.639273,40.639332,40.639398,40.639467,40.639553,40.639642,40.639697,40.639768,40.639838,40.639853,40.639863,40.639917,40.639992,40.64005,40.640115,40.640185,40.640255,40.64033,40.640398,40.640477,40.640538,40.640608,40.640663,40.640732,40.640813,40.640867,40.640882,40.640863,40.640865,40.640812,40.640732,40.640677,40.640633,40.640565,40.640518,40.6405,40.640493,40.640477,40.640452,40.640417,40.640345,40.640278,40.640197,40.640178,40.640152,40.640123,40.640075,40.640018,40.639962,40.639908,40.639857,40.639803,40.639733,40.639668,40.639603,40.639542,40.639503,40.639465,40.639422,40.639388,40.63935,40.639325,40.639302,40.639273,40.63923,40.639167,40.639127,40.63911,40.639095,40.63905,40.639012,40.638985,40.63893,40.638887,40.63884,40.638778,40.63872,40.638697,40.638648,40.638607,40.638565,40.638525,40.638477,40.638405,40.638478,40.638557,40.638637,40.638722,40.638788,40.638857,40.638912,40.638972,40.639035,40.639072,40.639117,40.639185,40.639262,40.639323,40.639383,40.639453,40.63953,40.639593,40.639637,40.639703,40.639787,40.639863,40.639937,40.639997,40.640048,40.640105,40.640178,40.640237,40.640255,40.640258,40.640252,40.64027,40.640237,40.640183,40.640157,40.640153,40.640202,40.640253,40.640277,40.64032,40.640357,40.640353,40.640332,40.640305,40.640308,40.640313,40.640277,40.640245,40.640242,40.640278,40.640318,40.640315,40.640302,40.640277,40.640268,40.64027,40.640255,40.6403,40.640292,40.64031,40.640325,40.640345,40.640343,40.640315,40.640323,40.640333,40.64033,40.640348,40.640357,40.640388,40.640417,40.640397,40.640357,40.640313,40.640293,40.64027,40.640207,40.640185,40.64015,40.640148,40.640193,40.64024,40.640332,40.640362,40.640438,40.640485,40.640552,40.640645,40.64067,40.640755,40.640787,40.640835,40.640902,40.64095,40.641005,40.641052,40.641103,40.641153,40.641215,40.64126,40.641303,40.64136,40.641392,40.641392,40.641437,40.641473,40.641527,40.641595,40.64164,40.641652,40.641685,40.641742,40.6418,40.641862,40.641945,40.642032,40.642117,40.642202,40.642258,40.642327,40.642405,40.642483,40.642572,40.642647,40.642718,40.642785,40.642838,40.642902,40.642972,40.642987,40.642995,40.642978,40.642963,40.642932,40.642885,40.642833,40.642803,40.642755,40.642727,40.642683,40.642627,40.642605,40.642568,40.64254,40.64251,40.642457,40.642398,40.6424,40.642458,40.642535,40.642608,40.642677,40.642738,40.642793,40.642805,40.642823,40.642878,40.642952,40.643017,40.643083,40.643122,40.64315,40.643142,40.64314,40.643112,40.643093,40.643093],[22.95928,22.959397,22.959473,22.959467,22.959435,22.95936,22.959263,22.959203,22.959198,22.959192,22.959107,22.959105,22.959098,22.959062,22.959065,22.959095,22.959168,22.959177,22.959112,22.959075,22.959097,22.959115,22.959047,22.959033,22.959015,22.959083,22.959172,22.95926,22.959327,22.959402,22.959455,22.959543,22.959572,22.959643,22.959732,22.959785,22.959805,22.95978,22.959733,22.959678,22.959602,22.959508,22.959433,22.959333,22.959285,22.959288,22.959228,22.959275,22.959335,22.959447,22.959372,22.959312,22.95925,22.95919,22.959258,22.959272,22.959208,22.959137,22.959057,22.958967,22.958917,22.958853,22.958803,22.958745,22.958675,22.958603,22.958523,22.95845,22.958373,22.95831,22.958237,22.95818,22.958125,22.958058,22.95799,22.957937,22.957883,22.95782,22.957758,22.957687,22.957688,22.957662,22.957597,22.957525,22.95747,22.957415,22.957332,22.957288,22.957237,22.95718,22.957123,22.9571,22.95707,22.956998,22.95692,22.956822,22.956727,22.956692,22.956642,22.956575,22.95651,22.956448,22.956408,22.956345,22.956273,22.956203,22.956137,22.956068,22.956023,22.955958,22.955905,22.955847,22.955792,22.95574,22.955688,22.955652,22.955623,22.955683,22.955658,22.955613,22.955663,22.955722,22.955765,22.955822,22.955895,22.955978,22.956072,22.956165,22.95626,22.956283,22.956275,22.956255,22.956228,22.956293,22.956287,22.95625,22.956192,22.956118,22.956093,22.95602,22.955947,22.955888,22.955807,22.955747,22.955698,22.955635,22.955578,22.955497,22.95542,22.955378,22.955313,22.955242,22.955175,22.955113,22.955033,22.954965,22.954908,22.954847,22.954792,22.954723,22.954655,22.95459,22.95451,22.954442,22.95436,22.954308,22.954258,22.954203,22.954135,22.954087,22.95405,22.953993,22.953908,22.95384,22.953788,22.95373,22.953653,22.953593,22.953525,22.953565,22.95366,22.953645,22.953615,22.95362,22.953655,22.953638,22.953648,22.953637,22.953573,22.953517,22.953512,22.95353,22.95354,22.95352,22.953502,22.953495,22.953488,22.953468,22.953455,22.953453,22.953455,22.95346,22.953455,22.95341,22.9534,22.953382,22.953378,22.953385,22.953375,22.953357,22.953355,22.953343,22.953312,22.953207,22.953102,22.953112,22.95309,22.95308,22.953037,22.953047,22.95305,22.953063,22.953052,22.953038,22.953032,22.95304,22.953042,22.953008,22.952985,22.952957,22.952943,22.952925,22.952907,22.952865,22.95283,22.952833,22.952833,22.952738,22.952635,22.952532,22.952427,22.952325,22.952233,22.952157,22.952048,22.951942,22.951828,22.95172,22.951622,22.951517,22.9514,22.951295,22.951197,22.951092,22.950987,22.950873,22.950762,22.950662,22.950558,22.950452,22.950337,22.950228,22.950123,22.950008,22.949898,22.949795,22.949683,22.949598,22.949495,22.949383,22.949282,22.949178,22.949072,22.948983,22.948893,22.948823,22.948797,22.948778,22.948735,22.948662,22.94859,22.94852,22.948452,22.948385,22.948332,22.948275,22.948197,22.948127,22.948067,22.947983,22.947887,22.947868,22.947842,22.947863,22.94786,22.947875,22.947883,22.947847,22.947817,22.947783,22.947742,22.947717,22.947687,22.947667,22.947635,22.947598,22.947578,22.947545,22.94752,22.947485,22.947447,22.947422,22.947398,22.947377,22.947363,22.94735,22.947325,22.947273,22.947208,22.947138,22.947055,22.946978,22.946907,22.946815,22.946738,22.946653,22.946577,22.946498,22.9464,22.946303,22.946233,22.946163,22.946065,22.94598,22.945898,22.945837,22.94574,22.94567,22.945588,22.945492,22.945408,22.945327,22.94524,22.945163,22.94508,22.944988,22.944915,22.944838,22.944748,22.944662,22.9446,22.944502,22.944415,22.94434,22.944273,22.944205,22.944132,22.94403,22.943938,22.943862,22.943785,22.94373,22.943652,22.94356,22.94348,22.943405,22.943318,22.943243,22.94317,22.943102,22.943023,22.942953,22.942862,22.94278,22.942705,22.942628,22.942558,22.942478,22.942397,22.942298,22.942208,22.942128,22.942058,22.941975,22.941875,22.941793,22.941705,22.9416,22.94151,22.941437,22.941355,22.941268,22.941178,22.941082,22.940993,22.940915,22.940843,22.940762,22.940665,22.94059,22.940505,22.94042,22.940373,22.94039,22.940327,22.940235,22.940152,22.940072,22.939982,22.9399,22.939823,22.939745,22.939663,22.939573,22.939478,22.939382,22.939298,22.93921,22.939128,22.939042,22.93896,22.938893,22.938817,22.938728,22.938638,22.93857,22.938467,22.938378,22.938303,22.938297,22.938325,22.938397,22.938477,22.938533,22.938608,22.938667,22.938725,22.938803,22.938865,22.938932,22.938983,22.938992,22.939005,22.93905,22.93911,22.939187,22.939248,22.939338,22.939367,22.939487,22.93959,22.939652,22.939717,22.939783,22.939858,22.9399,22.939958,22.940022,22.9401,22.940185,22.940252,22.940313,22.940393,22.940417,22.940512,22.940587,22.940645,22.94071,22.940788,22.940888,22.940955,22.940985,22.941007,22.941017,22.941008,22.94104,22.941115,22.941203,22.941268,22.941305,22.94137,22.941443,22.941497,22.94156,22.941648,22.94174,22.941832,22.941947,22.942022,22.942065,22.942048,22.94213,22.942212,22.942295,22.942365,22.942438,22.942482,22.942497,22.942545,22.942597,22.942653,22.94265,22.942667,22.942715,22.942795,22.942858,22.942938,22.943022,22.943123,22.94318,22.943182,22.943193,22.943257,22.943317,22.943377,22.94343,22.943473,22.943532,22.943598,22.943672,22.943715,22.943755,22.943837,22.943908,22.943973,22.943963,22.94395,22.944013,22.944072,22.944137,22.94425,22.944347,22.944438,22.944502,22.944583,22.94465,22.944697,22.944767,22.944823,22.944863,22.94491,22.944982,22.945055,22.945143,22.9452,22.945235,22.945327,22.945393,22.945495,22.945605,22.945668,22.945715,22.9458,22.945893,22.94597,22.946055,22.946155,22.946262,22.946368,22.946477,22.946582,22.946633,22.94668,22.946715,22.946827,22.946935,22.947023,22.947113,22.947182,22.947265,22.947355,22.947443,22.947537,22.94761,22.947673,22.947747,22.947813,22.947903,22.947998,22.948088,22.948187,22.94828,22.94838,22.948487,22.948592,22.948677,22.948743,22.94884,22.948943,22.949052,22.949153,22.94926,22.949372,22.949458,22.949555,22.949638,22.949723,22.94979,22.949882,22.949975,22.950078,22.950167,22.950238,22.95033,22.95039,22.95045,22.950487,22.950522,22.950548,22.950623,22.950678,22.950768,22.95085,22.950932,22.95103,22.951118,22.951168,22.951223,22.951293,22.951375,22.95143,22.951473,22.951552,22.951632,22.951705,22.951743,22.951773,22.951835,22.951905,22.951998,22.95209,22.952122,22.952208,22.952308,22.95241,22.952517,22.952628,22.952735,22.952825,22.952937,22.95305,22.95314,22.953235,22.95334,22.953435,22.953517,22.953618,22.953722,22.953832,22.95393,22.954042,22.954147,22.954238,22.954342,22.954445,22.954545,22.954647,22.954758,22.954862,22.954975,22.955087,22.955203,22.955293,22.955398,22.955498,22.955598,22.955713,22.955825,22.955933,22.956047,22.956162,22.956278,22.956373,22.956483,22.956592,22.956687,22.956793,22.956893,22.956993,22.957098,22.957202,22.957273,22.957295,22.957397,22.957403,22.957515,22.957538,22.957567,22.957578,22.957637,22.95773,22.957747,22.95773,22.957742,22.957727,22.957628,22.957537,22.957475,22.957382,22.957308,22.957218,22.957137,22.957038,22.956958,22.95686,22.956758,22.956673,22.956565,22.95645,22.956362,22.956257,22.956165,22.956102,22.956005,22.955898,22.955793,22.955707,22.955617,22.955548,22.955508,22.955517,22.955495,22.955498,22.955583,22.95563,22.955653,22.955668,22.955677,22.95571,22.955742,22.955793,22.955868,22.955912,22.95597,22.956075,22.956172,22.956287,22.956403,22.95651,22.956597,22.95669,22.956792,22.956883,22.956993,22.957093,22.957182,22.957287,22.957385,22.957488,22.957592,22.957683,22.957768,22.95788,22.957968,22.95801,22.958077,22.958152,22.958228,22.95831,22.958418,22.958527,22.958618,22.958677,22.958743,22.958805,22.958903,22.959007,22.959117,22.95923,22.959333,22.959352,22.959352],1,null,null,{"interactive":true,"className":"","stroke":true,"color":"black","weight":5,"opacity":0.9,"fill":true,"fillColor":"black","fillOpacity":0.2},null,null,null,{"interactive":false,"permanent":false,"direction":"auto","opacity":1,"offset":[0,0],"textsize":"10px","textOnly":false,"className":"","sticky":true},null,null]},{"method":"addSearchOSM","args":[{"url":"","propertyLoc":"loc","propertyName":"title","moveToLocation":true,"zoom":17,"container":"","minLength":2,"initial":true,"casesensitive":false,"autoType":true,"delayType":400,"tooltipLimit":-1,"tipAutoSubmit":true,"firstTipSubmit":false,"autoResize":true,"collapsed":true,"autoCollapse":true,"autoCollapseTime":1200,"textErr":"Location Not Found","textCancel":"Cancel","textPlaceholder":"Search...","position":"topleft","hideMarkerOnCollapse":false}]}],"limits":{"lat":[40.625307,40.64315],"lng":[22.938297,22.959805]}},"evals":[],"jsHooks":[]}</script>
+<div id="htmlwidget-e2a8cf15626cb28f0352" style="width:576px;height:460.8px;" class="leaflet html-widget"></div>
+<script type="application/json" data-for="htmlwidget-e2a8cf15626cb28f0352">{"x":{"options":{"crs":{"crsClass":"L.CRS.EPSG3857","code":null,"proj4def":null,"projectedBounds":null,"options":{}}},"calls":[{"method":"addProviderTiles","args":["Esri",null,null,{"errorTileUrl":"","noWrap":false,"detectRetina":false}]},{"method":"addTiles","args":["//{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",null,null,{"minZoom":0,"maxZoom":18,"tileSize":256,"subdomains":"abc","errorTileUrl":"","tms":false,"noWrap":false,"zoomOffset":0,"zoomReverse":false,"opacity":1,"zIndex":1,"detectRetina":false,"attribution":"&copy; <a href=\"http://openstreetmap.org\">OpenStreetMap<\/a> contributors, <a href=\"http://creativecommons.org/licenses/by-sa/2.0/\">CC-BY-SA<\/a>"}]},{"method":"addCircles","args":[[40.64306,40.643048,40.642992,40.642905,40.64283,40.642778,40.642732,40.642657,40.642578,40.642505,40.642443,40.642365,40.642288,40.642205,40.642125,40.642047,40.64198,40.641895,40.641822,40.641745,40.641663,40.641588,40.641517,40.64146,40.641377,40.641307,40.641255,40.641202,40.641132,40.641068,40.641003,40.640955,40.64087,40.640803,40.64079,40.640718,40.64063,40.640553,40.640482,40.640418,40.640357,40.640308,40.640262,40.64022,40.64014,40.640052,40.639977,40.639902,40.639837,40.639827,40.63978,40.63971,40.639643,40.639577,40.639503,40.639422,40.639358,40.63929,40.639237,40.639188,40.639117,40.639045,40.638978,40.638922,40.638857,40.6388,40.63874,40.638682,40.63862,40.638553,40.638493,40.638423,40.638355,40.638295,40.638235,40.638162,40.638093,40.63802,40.63796,40.637897,40.63781,40.637735,40.63766,40.637605,40.637543,40.637482,40.637418,40.637342,40.63727,40.637208,40.637137,40.637058,40.636977,40.636913,40.636862,40.636822,40.63678,40.636703,40.636628,40.636565,40.636497,40.636423,40.636342,40.63627,40.636208,40.636142,40.636077,40.636005,40.635933,40.635865,40.635795,40.635727,40.635657,40.635585,40.635507,40.635427,40.635342,40.635272,40.635187,40.635107,40.635027,40.634958,40.634882,40.634812,40.634747,40.634702,40.634657,40.634618,40.634575,40.634503,40.634433,40.63435,40.634278,40.634205,40.634122,40.634042,40.633978,40.633915,40.633837,40.633783,40.633715,40.633643,40.63358,40.63351,40.633435,40.633365,40.633298,40.63324,40.633185,40.63312,40.633047,40.632978,40.632913,40.632842,40.632787,40.632723,40.632655,40.632582,40.632503,40.632447,40.63238,40.63232,40.632257,40.632193,40.632132,40.63207,40.631993,40.631923,40.631865,40.63179,40.631713,40.631638,40.631585,40.631528,40.63145,40.631387,40.63132,40.631248,40.631175,40.631103,40.631057,40.630977,40.63089,40.630803,40.630718,40.630637,40.630552,40.630475,40.630415,40.630347,40.630258,40.63018,40.630093,40.63001,40.629922,40.629842,40.629753,40.629678,40.629603,40.629517,40.629443,40.629358,40.629282,40.629203,40.62912,40.629038,40.628957,40.628877,40.628795,40.628707,40.628622,40.628535,40.62845,40.628418,40.628378,40.628305,40.628223,40.628135,40.628055,40.62798,40.627903,40.627817,40.627733,40.627658,40.62758,40.6275,40.627413,40.62734,40.627263,40.627187,40.62711,40.627035,40.62695,40.626872,40.626793,40.62671,40.62663,40.62658,40.626537,40.626572,40.626577,40.62655,40.626497,40.626433,40.626398,40.62639,40.626397,40.62639,40.626397,40.626402,40.626407,40.626392,40.626378,40.626357,40.626365,40.626382,40.62638,40.626372,40.62636,40.62635,40.626343,40.626342,40.62636,40.626367,40.626368,40.62638,40.626407,40.62645,40.626467,40.62647,40.626493,40.626522,40.626538,40.62651,40.626455,40.626393,40.626317,40.626232,40.626157,40.626087,40.62602,40.625953,40.625887,40.62582,40.625752,40.625685,40.625632,40.625562,40.625487,40.62544,40.62539,40.625307,40.625385,40.625472,40.625557,40.625637,40.625717,40.625793,40.625878,40.625962,40.62604,40.626122,40.626197,40.626272,40.626348,40.626425,40.626502,40.626572,40.626652,40.626735,40.626807,40.62689,40.626965,40.62705,40.627137,40.627222,40.627305,40.627375,40.627445,40.627505,40.627568,40.627627,40.627685,40.62773,40.627795,40.62785,40.627903,40.62795,40.627993,40.628042,40.628103,40.62816,40.628202,40.628263,40.62832,40.628392,40.628433,40.628505,40.628568,40.628608,40.628662,40.62872,40.628762,40.628812,40.628873,40.628923,40.628982,40.629038,40.629097,40.629153,40.629222,40.629252,40.629298,40.629357,40.62942,40.629482,40.629547,40.629587,40.629642,40.629703,40.629752,40.629822,40.629883,40.62993,40.629978,40.63004,40.630093,40.630145,40.630195,40.630253,40.630303,40.630363,40.630405,40.63046,40.630515,40.630582,40.630653,40.630718,40.630762,40.630795,40.630835,40.630882,40.630938,40.630998,40.631045,40.631103,40.631145,40.631185,40.631235,40.6313,40.631353,40.631403,40.631442,40.631493,40.63154,40.63159,40.631637,40.631685,40.631718,40.631765,40.631815,40.63187,40.631948,40.632037,40.632105,40.632158,40.632207,40.63226,40.632312,40.632365,40.632413,40.632473,40.632528,40.632585,40.632632,40.632682,40.63273,40.632775,40.632823,40.632877,40.632933,40.632993,40.63305,40.633098,40.633137,40.633195,40.633237,40.633282,40.633345,40.633427,40.633505,40.633572,40.633633,40.633703,40.633772,40.633847,40.633915,40.633977,40.634042,40.634115,40.634192,40.634275,40.63436,40.634435,40.634503,40.634565,40.634627,40.634675,40.634692,40.634693,40.634723,40.634798,40.634872,40.634943,40.635012,40.635087,40.635143,40.635188,40.635247,40.635283,40.63535,40.635413,40.635478,40.635565,40.635603,40.635652,40.635712,40.635768,40.635807,40.635853,40.63592,40.636007,40.636092,40.636167,40.636252,40.636328,40.636397,40.636447,40.636517,40.636595,40.636667,40.636733,40.636808,40.636872,40.636908,40.636958,40.636963,40.636963,40.63703,40.637112,40.637197,40.63726,40.637318,40.637357,40.637395,40.637458,40.637533,40.637607,40.63768,40.637753,40.63783,40.637913,40.63799,40.638068,40.638128,40.638202,40.63826,40.638307,40.638352,40.638422,40.638507,40.638585,40.638658,40.638727,40.63879,40.638858,40.638927,40.639003,40.639058,40.639122,40.639205,40.639273,40.639332,40.639398,40.639467,40.639553,40.639642,40.639697,40.639768,40.639838,40.639853,40.639863,40.639917,40.639992,40.64005,40.640115,40.640185,40.640255,40.64033,40.640398,40.640477,40.640538,40.640608,40.640663,40.640732,40.640813,40.640867,40.640882,40.640863,40.640865,40.640812,40.640732,40.640677,40.640633,40.640565,40.640518,40.6405,40.640493,40.640477,40.640452,40.640417,40.640345,40.640278,40.640197,40.640178,40.640152,40.640123,40.640075,40.640018,40.639962,40.639908,40.639857,40.639803,40.639733,40.639668,40.639603,40.639542,40.639503,40.639465,40.639422,40.639388,40.63935,40.639325,40.639302,40.639273,40.63923,40.639167,40.639127,40.63911,40.639095,40.63905,40.639012,40.638985,40.63893,40.638887,40.63884,40.638778,40.63872,40.638697,40.638648,40.638607,40.638565,40.638525,40.638477,40.638405,40.638478,40.638557,40.638637,40.638722,40.638788,40.638857,40.638912,40.638972,40.639035,40.639072,40.639117,40.639185,40.639262,40.639323,40.639383,40.639453,40.63953,40.639593,40.639637,40.639703,40.639787,40.639863,40.639937,40.639997,40.640048,40.640105,40.640178,40.640237,40.640255,40.640258,40.640252,40.64027,40.640237,40.640183,40.640157,40.640153,40.640202,40.640253,40.640277,40.64032,40.640357,40.640353,40.640332,40.640305,40.640308,40.640313,40.640277,40.640245,40.640242,40.640278,40.640318,40.640315,40.640302,40.640277,40.640268,40.64027,40.640255,40.6403,40.640292,40.64031,40.640325,40.640345,40.640343,40.640315,40.640323,40.640333,40.64033,40.640348,40.640357,40.640388,40.640417,40.640397,40.640357,40.640313,40.640293,40.64027,40.640207,40.640185,40.64015,40.640148,40.640193,40.64024,40.640332,40.640362,40.640438,40.640485,40.640552,40.640645,40.64067,40.640755,40.640787,40.640835,40.640902,40.64095,40.641005,40.641052,40.641103,40.641153,40.641215,40.64126,40.641303,40.64136,40.641392,40.641392,40.641437,40.641473,40.641527,40.641595,40.64164,40.641652,40.641685,40.641742,40.6418,40.641862,40.641945,40.642032,40.642117,40.642202,40.642258,40.642327,40.642405,40.642483,40.642572,40.642647,40.642718,40.642785,40.642838,40.642902,40.642972,40.642987,40.642995,40.642978,40.642963,40.642932,40.642885,40.642833,40.642803,40.642755,40.642727,40.642683,40.642627,40.642605,40.642568,40.64254,40.64251,40.642457,40.642398,40.6424,40.642458,40.642535,40.642608,40.642677,40.642738,40.642793,40.642805,40.642823,40.642878,40.642952,40.643017,40.643083,40.643122,40.64315,40.643142,40.64314,40.643112,40.643093,40.643093],[22.95928,22.959397,22.959473,22.959467,22.959435,22.95936,22.959263,22.959203,22.959198,22.959192,22.959107,22.959105,22.959098,22.959062,22.959065,22.959095,22.959168,22.959177,22.959112,22.959075,22.959097,22.959115,22.959047,22.959033,22.959015,22.959083,22.959172,22.95926,22.959327,22.959402,22.959455,22.959543,22.959572,22.959643,22.959732,22.959785,22.959805,22.95978,22.959733,22.959678,22.959602,22.959508,22.959433,22.959333,22.959285,22.959288,22.959228,22.959275,22.959335,22.959447,22.959372,22.959312,22.95925,22.95919,22.959258,22.959272,22.959208,22.959137,22.959057,22.958967,22.958917,22.958853,22.958803,22.958745,22.958675,22.958603,22.958523,22.95845,22.958373,22.95831,22.958237,22.95818,22.958125,22.958058,22.95799,22.957937,22.957883,22.95782,22.957758,22.957687,22.957688,22.957662,22.957597,22.957525,22.95747,22.957415,22.957332,22.957288,22.957237,22.95718,22.957123,22.9571,22.95707,22.956998,22.95692,22.956822,22.956727,22.956692,22.956642,22.956575,22.95651,22.956448,22.956408,22.956345,22.956273,22.956203,22.956137,22.956068,22.956023,22.955958,22.955905,22.955847,22.955792,22.95574,22.955688,22.955652,22.955623,22.955683,22.955658,22.955613,22.955663,22.955722,22.955765,22.955822,22.955895,22.955978,22.956072,22.956165,22.95626,22.956283,22.956275,22.956255,22.956228,22.956293,22.956287,22.95625,22.956192,22.956118,22.956093,22.95602,22.955947,22.955888,22.955807,22.955747,22.955698,22.955635,22.955578,22.955497,22.95542,22.955378,22.955313,22.955242,22.955175,22.955113,22.955033,22.954965,22.954908,22.954847,22.954792,22.954723,22.954655,22.95459,22.95451,22.954442,22.95436,22.954308,22.954258,22.954203,22.954135,22.954087,22.95405,22.953993,22.953908,22.95384,22.953788,22.95373,22.953653,22.953593,22.953525,22.953565,22.95366,22.953645,22.953615,22.95362,22.953655,22.953638,22.953648,22.953637,22.953573,22.953517,22.953512,22.95353,22.95354,22.95352,22.953502,22.953495,22.953488,22.953468,22.953455,22.953453,22.953455,22.95346,22.953455,22.95341,22.9534,22.953382,22.953378,22.953385,22.953375,22.953357,22.953355,22.953343,22.953312,22.953207,22.953102,22.953112,22.95309,22.95308,22.953037,22.953047,22.95305,22.953063,22.953052,22.953038,22.953032,22.95304,22.953042,22.953008,22.952985,22.952957,22.952943,22.952925,22.952907,22.952865,22.95283,22.952833,22.952833,22.952738,22.952635,22.952532,22.952427,22.952325,22.952233,22.952157,22.952048,22.951942,22.951828,22.95172,22.951622,22.951517,22.9514,22.951295,22.951197,22.951092,22.950987,22.950873,22.950762,22.950662,22.950558,22.950452,22.950337,22.950228,22.950123,22.950008,22.949898,22.949795,22.949683,22.949598,22.949495,22.949383,22.949282,22.949178,22.949072,22.948983,22.948893,22.948823,22.948797,22.948778,22.948735,22.948662,22.94859,22.94852,22.948452,22.948385,22.948332,22.948275,22.948197,22.948127,22.948067,22.947983,22.947887,22.947868,22.947842,22.947863,22.94786,22.947875,22.947883,22.947847,22.947817,22.947783,22.947742,22.947717,22.947687,22.947667,22.947635,22.947598,22.947578,22.947545,22.94752,22.947485,22.947447,22.947422,22.947398,22.947377,22.947363,22.94735,22.947325,22.947273,22.947208,22.947138,22.947055,22.946978,22.946907,22.946815,22.946738,22.946653,22.946577,22.946498,22.9464,22.946303,22.946233,22.946163,22.946065,22.94598,22.945898,22.945837,22.94574,22.94567,22.945588,22.945492,22.945408,22.945327,22.94524,22.945163,22.94508,22.944988,22.944915,22.944838,22.944748,22.944662,22.9446,22.944502,22.944415,22.94434,22.944273,22.944205,22.944132,22.94403,22.943938,22.943862,22.943785,22.94373,22.943652,22.94356,22.94348,22.943405,22.943318,22.943243,22.94317,22.943102,22.943023,22.942953,22.942862,22.94278,22.942705,22.942628,22.942558,22.942478,22.942397,22.942298,22.942208,22.942128,22.942058,22.941975,22.941875,22.941793,22.941705,22.9416,22.94151,22.941437,22.941355,22.941268,22.941178,22.941082,22.940993,22.940915,22.940843,22.940762,22.940665,22.94059,22.940505,22.94042,22.940373,22.94039,22.940327,22.940235,22.940152,22.940072,22.939982,22.9399,22.939823,22.939745,22.939663,22.939573,22.939478,22.939382,22.939298,22.93921,22.939128,22.939042,22.93896,22.938893,22.938817,22.938728,22.938638,22.93857,22.938467,22.938378,22.938303,22.938297,22.938325,22.938397,22.938477,22.938533,22.938608,22.938667,22.938725,22.938803,22.938865,22.938932,22.938983,22.938992,22.939005,22.93905,22.93911,22.939187,22.939248,22.939338,22.939367,22.939487,22.93959,22.939652,22.939717,22.939783,22.939858,22.9399,22.939958,22.940022,22.9401,22.940185,22.940252,22.940313,22.940393,22.940417,22.940512,22.940587,22.940645,22.94071,22.940788,22.940888,22.940955,22.940985,22.941007,22.941017,22.941008,22.94104,22.941115,22.941203,22.941268,22.941305,22.94137,22.941443,22.941497,22.94156,22.941648,22.94174,22.941832,22.941947,22.942022,22.942065,22.942048,22.94213,22.942212,22.942295,22.942365,22.942438,22.942482,22.942497,22.942545,22.942597,22.942653,22.94265,22.942667,22.942715,22.942795,22.942858,22.942938,22.943022,22.943123,22.94318,22.943182,22.943193,22.943257,22.943317,22.943377,22.94343,22.943473,22.943532,22.943598,22.943672,22.943715,22.943755,22.943837,22.943908,22.943973,22.943963,22.94395,22.944013,22.944072,22.944137,22.94425,22.944347,22.944438,22.944502,22.944583,22.94465,22.944697,22.944767,22.944823,22.944863,22.94491,22.944982,22.945055,22.945143,22.9452,22.945235,22.945327,22.945393,22.945495,22.945605,22.945668,22.945715,22.9458,22.945893,22.94597,22.946055,22.946155,22.946262,22.946368,22.946477,22.946582,22.946633,22.94668,22.946715,22.946827,22.946935,22.947023,22.947113,22.947182,22.947265,22.947355,22.947443,22.947537,22.94761,22.947673,22.947747,22.947813,22.947903,22.947998,22.948088,22.948187,22.94828,22.94838,22.948487,22.948592,22.948677,22.948743,22.94884,22.948943,22.949052,22.949153,22.94926,22.949372,22.949458,22.949555,22.949638,22.949723,22.94979,22.949882,22.949975,22.950078,22.950167,22.950238,22.95033,22.95039,22.95045,22.950487,22.950522,22.950548,22.950623,22.950678,22.950768,22.95085,22.950932,22.95103,22.951118,22.951168,22.951223,22.951293,22.951375,22.95143,22.951473,22.951552,22.951632,22.951705,22.951743,22.951773,22.951835,22.951905,22.951998,22.95209,22.952122,22.952208,22.952308,22.95241,22.952517,22.952628,22.952735,22.952825,22.952937,22.95305,22.95314,22.953235,22.95334,22.953435,22.953517,22.953618,22.953722,22.953832,22.95393,22.954042,22.954147,22.954238,22.954342,22.954445,22.954545,22.954647,22.954758,22.954862,22.954975,22.955087,22.955203,22.955293,22.955398,22.955498,22.955598,22.955713,22.955825,22.955933,22.956047,22.956162,22.956278,22.956373,22.956483,22.956592,22.956687,22.956793,22.956893,22.956993,22.957098,22.957202,22.957273,22.957295,22.957397,22.957403,22.957515,22.957538,22.957567,22.957578,22.957637,22.95773,22.957747,22.95773,22.957742,22.957727,22.957628,22.957537,22.957475,22.957382,22.957308,22.957218,22.957137,22.957038,22.956958,22.95686,22.956758,22.956673,22.956565,22.95645,22.956362,22.956257,22.956165,22.956102,22.956005,22.955898,22.955793,22.955707,22.955617,22.955548,22.955508,22.955517,22.955495,22.955498,22.955583,22.95563,22.955653,22.955668,22.955677,22.95571,22.955742,22.955793,22.955868,22.955912,22.95597,22.956075,22.956172,22.956287,22.956403,22.95651,22.956597,22.95669,22.956792,22.956883,22.956993,22.957093,22.957182,22.957287,22.957385,22.957488,22.957592,22.957683,22.957768,22.95788,22.957968,22.95801,22.958077,22.958152,22.958228,22.95831,22.958418,22.958527,22.958618,22.958677,22.958743,22.958805,22.958903,22.959007,22.959117,22.95923,22.959333,22.959352,22.959352],1,null,null,{"interactive":true,"className":"","stroke":true,"color":"black","weight":5,"opacity":0.7,"fill":true,"fillColor":"black","fillOpacity":0.2},null,null,null,{"interactive":false,"permanent":false,"direction":"auto","opacity":1,"offset":[0,0],"textsize":"10px","textOnly":false,"className":"","sticky":true},null,null]},{"method":"addCircles","args":[[40.643052,40.643068,40.643105,40.643125,40.643128,40.64314,40.643117,40.643107,40.643117,40.643115,40.643097,40.643035,40.642975,40.642893,40.642815,40.642738,40.642665,40.642583,40.642527,40.642462,40.642377,40.642292,40.642227,40.642205,40.64221,40.642218,40.642237,40.642243,40.642263,40.642293,40.642327,40.642348,40.642338,40.642392,40.642433,40.64245,40.64248,40.642505,40.642533,40.642567,40.642595,40.642628,40.642648,40.642683,40.642738,40.642807,40.64287,40.642938,40.643017,40.6431,40.64318,40.643255,40.64334,40.643422,40.643505,40.643592,40.64368,40.643753,40.643817,40.643905,40.643983,40.644065,40.644148,40.644237,40.644325,40.64434,40.644355,40.644357,40.644423,40.644502,40.644582,40.644668,40.644748,40.644837,40.644925,40.645007,40.645088,40.64517,40.645253,40.645322,40.645398,40.645485,40.645565,40.645635,40.645698,40.64571,40.645715,40.64577,40.645848,40.645928,40.646013,40.646088,40.64617,40.64625,40.646327,40.646405,40.64649,40.646565,40.646653,40.646733,40.646812,40.64689,40.646972,40.64705,40.647123,40.647193,40.647267,40.647345,40.647423,40.647498,40.647572,40.647648,40.647722,40.6478,40.647867,40.647955,40.648038,40.6481,40.648157,40.648232,40.648312,40.648315,40.648328,40.648322,40.648282,40.648363,40.648435,40.648498,40.648582,40.648653,40.648602,40.648567,40.648568,40.648597,40.648648,40.648693,40.648737,40.648783,40.648822,40.648877,40.6489,40.648942,40.648982,40.649027,40.649053,40.649075,40.649125,40.649193,40.649258,40.649328,40.649342,40.649325,40.649318,40.649297,40.649283,40.649285,40.649295,40.649312,40.649308,40.649293,40.649278,40.649257,40.649227,40.649205,40.649157,40.649127,40.649077,40.649047,40.649015,40.649007,40.648958,40.64892,40.648875,40.648855,40.648833,40.648785,40.648703,40.64862,40.64854,40.648465,40.648393,40.648322,40.648253,40.648183,40.648127,40.64807,40.648052,40.648032,40.64797,40.647885,40.6478,40.647745,40.647688,40.647612,40.647528,40.647472,40.647417,40.647335,40.647247,40.647168,40.64709,40.647013,40.64695,40.646875,40.646803,40.646722,40.646635,40.646563,40.646497,40.646423,40.646345,40.646267,40.646197,40.646113,40.646035,40.645953,40.645875,40.645793,40.645718,40.645648,40.645572,40.645485,40.645398,40.645315,40.645237,40.645157,40.645075,40.644987,40.6449,40.644817,40.644737,40.644648,40.644568,40.644498,40.644457,40.644383,40.644332,40.644265,40.644188,40.644105,40.644022,40.643945,40.643865,40.64381,40.643733,40.643652,40.643577,40.64349,40.643403,40.643328,40.643258,40.643205,40.64318,40.643138,40.643138],[22.959442,22.959538,22.959635,22.95975,22.959855,22.95997,22.960068,22.960182,22.960283,22.96039,22.960502,22.960583,22.960655,22.960695,22.960733,22.960747,22.96077,22.96079,22.960705,22.960655,22.960623,22.960605,22.960675,22.960782,22.96089,22.960993,22.961105,22.961217,22.961312,22.961413,22.96152,22.96163,22.961747,22.961833,22.961925,22.962023,22.962128,22.962233,22.962338,22.962437,22.962545,22.96265,22.962752,22.962857,22.962947,22.963022,22.963092,22.963138,22.96319,22.963205,22.96323,22.963222,22.963197,22.963192,22.963195,22.963172,22.963155,22.963192,22.963262,22.963262,22.963308,22.963332,22.963352,22.963365,22.963363,22.963475,22.96359,22.963703,22.96377,22.963808,22.963815,22.963807,22.963825,22.963822,22.963813,22.963785,22.963787,22.963782,22.96378,22.963743,22.963712,22.963705,22.963723,22.963778,22.963852,22.963958,22.964075,22.964163,22.9642,22.964232,22.964267,22.964313,22.964275,22.964252,22.964223,22.96419,22.964183,22.964148,22.964157,22.964127,22.964097,22.96406,22.964053,22.964038,22.964005,22.963945,22.963902,22.963858,22.96382,22.96377,22.963723,22.963672,22.963627,22.96365,22.96371,22.963697,22.963658,22.963578,22.963497,22.963472,22.963518,22.963633,22.963745,22.963857,22.96396,22.963995,22.964015,22.964082,22.964067,22.964132,22.964223,22.964313,22.964197,22.964098,22.964018,22.963925,22.963837,22.963748,22.963647,22.96356,22.963448,22.963358,22.963265,22.963172,22.963072,22.962968,22.962877,22.962815,22.962748,22.962682,22.962567,22.962465,22.962353,22.962248,22.962135,22.962023,22.96191,22.961808,22.961693,22.96158,22.961467,22.961353,22.961255,22.961147,22.961062,22.960958,22.960872,22.96077,22.960668,22.960562,22.960472,22.96037,22.960282,22.960168,22.960063,22.959977,22.960025,22.960053,22.960098,22.960138,22.960185,22.960243,22.960302,22.96037,22.960455,22.960545,22.960655,22.960763,22.960848,22.960857,22.960842,22.960908,22.960968,22.961002,22.960983,22.960902,22.960815,22.9608,22.96078,22.960732,22.960688,22.960637,22.960572,22.960518,22.96047,22.960428,22.960398,22.960332,22.960267,22.960207,22.96015,22.960113,22.960078,22.960035,22.959983,22.959953,22.959937,22.959895,22.959837,22.959803,22.959808,22.959805,22.959828,22.959825,22.95988,22.959925,22.959957,22.959975,22.959983,22.959997,22.959992,22.959978,22.959948,22.959895,22.959817,22.95976,22.959673,22.9596,22.959593,22.959608,22.959593,22.959573,22.959592,22.959673,22.959685,22.959675,22.959623,22.959595,22.95959,22.959635,22.95967,22.959578,22.959473,22.959402,22.959402],1,null,null,{"interactive":true,"className":"","stroke":true,"color":"blue","weight":5,"opacity":0.7,"fill":true,"fillColor":"blue","fillOpacity":0.2},null,null,null,{"interactive":false,"permanent":false,"direction":"auto","opacity":1,"offset":[0,0],"textsize":"10px","textOnly":false,"className":"","sticky":true},null,null]},{"method":"addCircles","args":[[40.64314,40.643063,40.64302,40.642955,40.642867,40.64279,40.64271,40.64263,40.642548,40.642502,40.642435,40.642352,40.642303,40.64222,40.642157,40.64215,40.64214,40.642128,40.64215,40.642175,40.642208,40.642282,40.642313,40.642337,40.642367,40.64241,40.642428,40.642435,40.64247,40.642507,40.642548,40.642578,40.642618,40.642647,40.642682,40.642733,40.642797,40.642825,40.642822,40.642742,40.6428,40.642868,40.642937,40.642968,40.642988,40.643,40.642985,40.64292,40.642833,40.642762,40.642708,40.642652,40.642568,40.642492,40.64241,40.64233,40.642245,40.642202,40.642148,40.642077,40.641993,40.64191,40.641825,40.64179,40.641745,40.641707,40.64168,40.64163,40.641585,40.641545,40.641488,40.641437,40.641383,40.641327,40.641257,40.641193,40.641147,40.641127,40.641095,40.641057,40.641028,40.640983,40.640925,40.640865,40.640815,40.640773,40.640703,40.640648,40.640608,40.64056,40.640505,40.640455,40.640427,40.64038,40.640328,40.640298,40.640272,40.64023,40.640188,40.640117,40.640037,40.639958,40.639912,40.639857,40.639792,40.639755,40.639735,40.639702,40.639657,40.639607,40.639565,40.639527,40.639503,40.639492,40.63951,40.639497,40.639475,40.63942,40.639353,40.639312,40.639272,40.639207,40.63921,40.639125,40.639057,40.639013,40.638962,40.638908,40.638828,40.638765,40.638688,40.638608,40.638532,40.63845,40.638368,40.6383,40.638225,40.638162,40.638098,40.638032,40.63799,40.637948,40.637935,40.637957,40.637958,40.63798,40.637992,40.638025,40.638037,40.638028,40.638013,40.637987,40.637948,40.63792,40.637882,40.637817,40.637758,40.637702,40.637638,40.637558,40.63749,40.637442,40.637403,40.637333,40.637282,40.637222,40.63716,40.637105,40.637053,40.637015,40.636972,40.636895,40.636823,40.63674,40.636668,40.63659,40.636502,40.636428,40.636345,40.636272,40.63619,40.636112,40.636192,40.636277,40.636357,40.636437,40.636515,40.636598,40.636685,40.636767,40.636847,40.636892,40.636952,40.637002,40.637048,40.637107,40.637168,40.637225,40.637285,40.637342,40.637377,40.637425,40.637483,40.637548,40.637615,40.637692,40.637755,40.637807,40.637868,40.637897,40.637928,40.637947,40.637957,40.637963,40.637958,40.63799,40.637987,40.637977,40.637962,40.637938,40.637912,40.637932,40.637938,40.637985,40.638047,40.638123,40.638193,40.638265,40.638338,40.638417,40.638493,40.638568,40.638653,40.638727,40.63879,40.638863,40.638918,40.638967,40.639032,40.639093,40.639138,40.639203,40.639263,40.639312,40.639352,40.639383,40.639403,40.639373,40.639383,40.639398,40.639413,40.639452,40.639492,40.63953,40.639573,40.639612,40.639653,40.639693,40.639743,40.639793,40.63984,40.639897,40.639977,40.640055,40.640125,40.640172,40.640212,40.640258,40.640302,40.640343,40.640393,40.640427,40.640462,40.640492,40.64054,40.640585,40.640622,40.640673,40.64072,40.640775,40.640825,40.64087,40.640918,40.640972,40.641025,40.641075,40.641105,40.641157,40.641198,40.64125,40.641302,40.641355,40.641397,40.64145,40.641503,40.641543,40.641583,40.641642,40.641698,40.64174,40.641787,40.641865,40.64195,40.642032,40.642103,40.642127,40.64213,40.642145,40.642145,40.642152,40.642125,40.642097,40.642083,40.642087,40.642033,40.641988,40.641957,40.641915,40.641872,40.64183,40.641782,40.641752,40.641715,40.641663,40.641627,40.641602,40.64158,40.641563,40.641533,40.641488,40.641462,40.641448,40.641418,40.641393,40.64138,40.641353,40.641325,40.641303,40.641308,40.641377,40.641457,40.641537,40.641622,40.641703,40.641787,40.641863,40.64194,40.642023,40.642108,40.64218,40.64226,40.642345,40.642427,40.642483,40.642553,40.642608,40.642667,40.642747,40.642818,40.642892,40.64297,40.643042,40.643085,40.643092,40.643092],[22.95939,22.959348,22.95944,22.959522,22.959512,22.95949,22.95944,22.95943,22.959387,22.959307,22.959233,22.95921,22.959117,22.959108,22.95903,22.958928,22.958812,22.958698,22.958587,22.958478,22.958373,22.958315,22.958212,22.958102,22.957993,22.9579,22.957788,22.957673,22.957573,22.957498,22.957405,22.957303,22.957217,22.957107,22.957013,22.956925,22.956843,22.956732,22.95671,22.956652,22.956637,22.95659,22.956513,22.956415,22.956303,22.956202,22.956102,22.956022,22.955998,22.955948,22.955887,22.95582,22.955778,22.955732,22.955707,22.95567,22.955638,22.955738,22.955663,22.955597,22.955603,22.955613,22.955612,22.955715,22.955805,22.955882,22.955978,22.956065,22.956163,22.956267,22.956355,22.956442,22.956527,22.956612,22.956682,22.956765,22.956863,22.956952,22.957053,22.957147,22.957245,22.957347,22.957418,22.957502,22.957593,22.957685,22.957758,22.957842,22.957945,22.958028,22.95812,22.958213,22.958318,22.95841,22.958507,22.958607,22.958702,22.95879,22.958892,22.958957,22.958988,22.95904,22.959133,22.959223,22.9593,22.959407,22.959522,22.959625,22.959718,22.959815,22.959908,22.95999,22.960083,22.960197,22.960307,22.960413,22.960523,22.960592,22.960663,22.960755,22.960858,22.960937,22.961055,22.961085,22.96116,22.96125,22.961333,22.961372,22.961423,22.96149,22.961543,22.961573,22.961622,22.961655,22.961678,22.961742,22.961795,22.961867,22.96194,22.962002,22.962105,22.962207,22.96232,22.962423,22.96254,22.962653,22.962767,22.962872,22.96298,22.96309,22.963207,22.963307,22.963412,22.96352,22.963618,22.963688,22.963763,22.963833,22.9639,22.963943,22.964017,22.964097,22.964192,22.964252,22.964342,22.964412,22.96448,22.964562,22.964652,22.964737,22.964837,22.964897,22.964963,22.964945,22.96491,22.964893,22.964892,22.964872,22.964858,22.964875,22.964903,22.96494,22.964897,22.964873,22.964853,22.964855,22.964877,22.964897,22.964923,22.964935,22.96495,22.96486,22.964778,22.964683,22.964595,22.964517,22.964442,22.964372,22.964285,22.964193,22.964093,22.964003,22.96393,22.963862,22.96381,22.963753,22.963698,22.963603,22.963527,22.963438,22.963332,22.96323,22.963115,22.963013,22.962902,22.962798,22.962688,22.962592,22.962478,22.962385,22.962278,22.962177,22.962065,22.961978,22.961903,22.961857,22.9618,22.96174,22.96168,22.961628,22.961612,22.961558,22.961538,22.961583,22.961535,22.961472,22.9614,22.961305,22.961228,22.96115,22.961053,22.96099,22.960912,22.960815,22.960715,22.960613,22.960502,22.960398,22.960298,22.960183,22.960068,22.959977,22.95989,22.959805,22.959713,22.959615,22.959518,22.95942,22.959337,22.959247,22.959155,22.95907,22.959022,22.958975,22.958903,22.958818,22.958713,22.958617,22.958527,22.958425,22.958332,22.958227,22.95814,22.95803,22.957952,22.95786,22.957763,22.957685,22.957595,22.957508,22.957427,22.957335,22.957237,22.957167,22.95708,22.956993,22.956888,22.95681,22.956723,22.95664,22.956562,22.956468,22.956377,22.956283,22.956198,22.956095,22.956002,22.955917,22.955825,22.955728,22.955638,22.955585,22.955548,22.955523,22.95558,22.955693,22.955795,22.955893,22.956,22.956115,22.956222,22.95632,22.956432,22.956547,22.956628,22.956717,22.956803,22.956908,22.957003,22.95709,22.957173,22.957277,22.957383,22.957467,22.957563,22.957675,22.957778,22.957887,22.957977,22.958058,22.958157,22.95827,22.958375,22.95848,22.95859,22.9587,22.958812,22.958912,22.959023,22.959075,22.959092,22.959117,22.959127,22.959115,22.959083,22.959097,22.959125,22.959117,22.95908,22.959045,22.959053,22.959088,22.959117,22.959202,22.95926,22.959333,22.959417,22.959458,22.959512,22.959565,22.959613,22.959567,22.959468,22.959418,22.959418],1,null,null,{"interactive":true,"className":"","stroke":true,"color":"orange","weight":5,"opacity":0.7,"fill":true,"fillColor":"orange","fillOpacity":0.2},null,null,null,{"interactive":false,"permanent":false,"direction":"auto","opacity":1,"offset":[0,0],"textsize":"10px","textOnly":false,"className":"","sticky":true},null,null]},{"method":"addCircles","args":[[40.6431,40.643025,40.642942,40.642862,40.642785,40.6427,40.642625,40.642562,40.642487,40.642407,40.642347,40.642265,40.642193,40.642138,40.642147,40.642185,40.642233,40.642263,40.642272,40.642297,40.642333,40.642333,40.642328,40.642392,40.642433,40.642463,40.642498,40.642533,40.642562,40.642607,40.64264,40.642662,40.642687,40.642733,40.642762,40.642782,40.642812,40.642855,40.642915,40.642935,40.642948,40.642975,40.642945,40.64288,40.642837,40.642772,40.642697,40.642622,40.642548,40.642473,40.642393,40.642325,40.642257,40.642218,40.642147,40.64207,40.641992,40.641918,40.641832,40.641758,40.641717,40.641665,40.641592,40.64164,40.64158,40.641505,40.641435,40.641377,40.641307,40.641222,40.641228,40.641223,40.641217,40.641213,40.641212,40.641215,40.641207,40.641172,40.641173,40.64121,40.641245,40.641272,40.641302,40.641348,40.641375,40.641353,40.641287,40.641217,40.641147,40.641072,40.640993,40.640937,40.640885,40.640868,40.640797,40.640722,40.640648,40.64057,40.640483,40.640403,40.640323,40.640263,40.6402,40.640127,40.640047,40.639977,40.639915,40.639838,40.63977,40.639743,40.639682,40.639598,40.639515,40.639442,40.639377,40.639317,40.63928,40.639208,40.63913,40.639047,40.638985,40.638912,40.638843,40.638782,40.63872,40.638658,40.638608,40.638553,40.638492,40.638415,40.63837,40.6383,40.638228,40.638167,40.638097,40.638012,40.637945,40.63787,40.6378,40.637762,40.637737,40.637675,40.637595,40.637512,40.637452,40.637372,40.637293,40.637233,40.637153,40.637093,40.637052,40.637007,40.636968,40.63692,40.63687,40.636782,40.63673,40.636665,40.636612,40.636552,40.636498,40.636435,40.636358,40.636292,40.636212,40.636135,40.636055,40.635975,40.635903,40.635867,40.635802,40.635733,40.635678,40.635627,40.635582,40.63554,40.635463,40.635388,40.635317,40.635247,40.635168,40.63509,40.635018,40.634933,40.63486,40.63479,40.634717,40.634638,40.634562,40.634502,40.634422,40.634345,40.634278,40.634217,40.634148,40.634082,40.634008,40.633935,40.63385,40.633787,40.63371,40.633657,40.633587,40.633532,40.633483,40.633445,40.633365,40.633307,40.633232,40.633153,40.633082,40.633038,40.63302,40.632943,40.632858,40.632775,40.632707,40.632637,40.632622,40.63259,40.632525,40.632457,40.632383,40.632335,40.632335,40.63231,40.632245,40.632173,40.632108,40.632083,40.632023,40.632008,40.631918,40.631897,40.631812,40.631748,40.631692,40.631673,40.63162,40.631577,40.631507,40.631458,40.63141,40.63137,40.631283,40.631212,40.631142,40.631093,40.631038,40.630982,40.630918,40.630852,40.630782,40.630705,40.63065,40.630618,40.630603,40.630547,40.630547,40.630585,40.630635,40.630708,40.630762,40.630803,40.63085,40.630902,40.63095,40.631002,40.631053,40.631105,40.631158,40.631207,40.631255,40.631318,40.631365,40.631407,40.631472,40.631523,40.631575,40.631635,40.631683,40.631733,40.631772,40.63181,40.631877,40.631952,40.632018,40.632087,40.632162,40.632232,40.63231,40.63238,40.632445,40.632505,40.632568,40.632622,40.632677,40.632757,40.632812,40.632843,40.632897,40.632982,40.633042,40.63309,40.633137,40.633133,40.633165,40.633213,40.633257,40.633302,40.633375,40.633442,40.633522,40.63358,40.63362,40.633668,40.633723,40.633782,40.633842,40.633898,40.633957,40.634038,40.634097,40.634168,40.634248,40.634332,40.634405,40.634487,40.634563,40.63464,40.634718,40.634788,40.634855,40.634928,40.63496,40.634968,40.63502,40.635088,40.635172,40.635253,40.63533,40.635417,40.635495,40.635577,40.635638,40.635717,40.635788,40.635863,40.635942,40.636002,40.636035,40.636083,40.636118,40.636177,40.636242,40.636288,40.636328,40.63638,40.636432,40.636473,40.636527,40.636588,40.636627,40.636688,40.63677,40.636847,40.636913,40.636903,40.636977,40.637058,40.63714,40.637212,40.637273,40.637352,40.63743,40.637508,40.637583,40.637663,40.637735,40.637795,40.637872,40.637938,40.63801,40.638075,40.638135,40.638197,40.638257,40.638297,40.63835,40.63841,40.63847,40.638545,40.638617,40.638693,40.638762,40.638837,40.638913,40.638985,40.639057,40.639123,40.639207,40.639268,40.63932,40.639398,40.639477,40.639557,40.639633,40.639717,40.639772,40.639832,40.639897,40.63995,40.639973,40.639988,40.639998,40.640063,40.640125,40.640187,40.640225,40.640285,40.640357,40.640418,40.640493,40.640567,40.64064,40.640713,40.64079,40.640753,40.640708,40.640682,40.64064,40.640602,40.640557,40.64051,40.64048,40.640423,40.640368,40.640333,40.640348,40.640313,40.640293,40.640243,40.640185,40.640127,40.640062,40.639985,40.639903,40.639828,40.639798,40.639768,40.63978,40.63975,40.639737,40.639717,40.639675,40.639628,40.639568,40.639538,40.63949,40.639432,40.639385,40.639323,40.639272,40.639218,40.639213,40.639188,40.639143,40.639072,40.63901,40.638947,40.638888,40.638867,40.638857,40.638802,40.638742,40.63869,40.638668,40.63864,40.6386,40.638538,40.638483,40.638443,40.638395,40.638422,40.63845,40.638488,40.638545,40.638613,40.638672,40.638723,40.638788,40.638862,40.638895,40.638952,40.639008,40.639077,40.639157,40.63924,40.639312,40.639353,40.63942,40.639497,40.639522,40.639602,40.639685,40.639752,40.639818,40.63988,40.639937,40.640002,40.640082,40.640138,40.640137,40.640128,40.640102,40.640095,40.640082,40.640122,40.640133,40.640147,40.640145,40.640132,40.640143,40.640192,40.640205,40.640202,40.640247,40.640262,40.640247,40.640258,40.640252,40.64025,40.640248,40.640242,40.640212,40.6402,40.640225,40.640245,40.640252,40.640267,40.640288,40.640278,40.640308,40.640333,40.64032,40.640318,40.640325,40.640348,40.64035,40.640362,40.64034,40.640375,40.64039,40.640397,40.640408,40.640415,40.64038,40.640333,40.64031,40.640302,40.640253,40.640222,40.640302,40.640308,40.640362,40.640372,40.640443,40.640455,40.640533,40.640617,40.640678,40.640727,40.64076,40.640827,40.640905,40.640985,40.64103,40.641047,40.641097,40.641137,40.641155,40.641178,40.641223,40.641255,40.64131,40.641358,40.641413,40.641462,40.641495,40.641555,40.64161,40.641665,40.641723,40.641775,40.641847,40.641933,40.642017,40.642083,40.642087,40.642097,40.642102,40.642093,40.642103,40.642103,40.642085,40.642057,40.642043,40.642032,40.64199,40.641952,40.641892,40.641845,40.641802,40.64178,40.641745,40.641715,40.64167,40.641623,40.641602,40.641582,40.641558,40.641535,40.641505,40.641472,40.641465,40.641435,40.641403,40.641368,40.64134,40.641307,40.64131,40.641377,40.641458,40.641543,40.64163,40.641707,40.64178,40.641862,40.64195,40.64203,40.642107,40.64218,40.642267,40.642352,40.642437,40.642502,40.642562,40.64264,40.642705,40.642775,40.642852,40.64293,40.643013,40.643083,40.643092,40.6431,40.6431],[22.95942,22.959483,22.959463,22.95946,22.959432,22.9594,22.95938,22.959305,22.95927,22.959247,22.959172,22.959138,22.95911,22.959017,22.958905,22.958807,22.958713,22.958613,22.958498,22.958397,22.958293,22.958188,22.958072,22.958,22.957913,22.957813,22.957715,22.957625,22.957523,22.957425,22.957318,22.957228,22.957122,22.957022,22.956915,22.956803,22.956707,22.956607,22.956528,22.956422,22.956305,22.956202,22.95611,22.956032,22.955955,22.955883,22.955835,22.955782,22.95575,22.955715,22.955667,22.955595,22.955522,22.955417,22.955478,22.955518,22.955548,22.955567,22.955587,22.955528,22.955428,22.955342,22.955302,22.955203,22.955135,22.95507,22.955,22.954937,22.954882,22.954847,22.954738,22.954628,22.954515,22.954408,22.954292,22.95418,22.954073,22.953965,22.953862,22.953762,22.953655,22.953553,22.953453,22.953355,22.953243,22.953133,22.953068,22.952997,22.952923,22.952877,22.95283,22.95275,22.952667,22.952565,22.952513,22.952457,22.952448,22.952403,22.952395,22.952358,22.952322,22.952238,22.952162,22.952137,22.9521,22.952027,22.95195,22.95191,22.95184,22.95174,22.951665,22.951635,22.951603,22.951542,22.951478,22.951418,22.95133,22.951288,22.951243,22.951212,22.951155,22.951088,22.951018,22.95095,22.950867,22.950797,22.950715,22.950633,22.950557,22.950515,22.950425,22.95037,22.950317,22.950273,22.950215,22.950178,22.950123,22.95006,22.94999,22.949905,22.949833,22.949758,22.949718,22.949682,22.949623,22.949587,22.949533,22.94952,22.94949,22.949405,22.949322,22.949243,22.949165,22.949087,22.948993,22.948987,22.948917,22.948863,22.948785,22.948717,22.948638,22.948595,22.948557,22.948532,22.948498,22.948458,22.948437,22.948408,22.948353,22.94826,22.948198,22.948123,22.94804,22.947948,22.947868,22.9478,22.947773,22.947733,22.947693,22.947635,22.947585,22.947553,22.947518,22.947495,22.947433,22.947382,22.947318,22.947273,22.947227,22.94715,22.947177,22.947123,22.947045,22.946962,22.946913,22.946853,22.94681,22.946757,22.946725,22.94666,22.9466,22.946535,22.94648,22.946427,22.946357,22.946262,22.946212,22.946178,22.946123,22.946068,22.945998,22.945903,22.9458,22.945745,22.94571,22.945677,22.945612,22.945538,22.945432,22.945392,22.945335,22.945285,22.945242,22.945155,22.945038,22.94493,22.944872,22.944823,22.944745,22.94468,22.944592,22.944578,22.944535,22.944525,22.944507,22.944435,22.944347,22.944247,22.944162,22.944067,22.944002,22.943908,22.943818,22.94372,22.943692,22.943632,22.943568,22.943487,22.943422,22.943338,22.94327,22.943208,22.943143,22.943123,22.943052,22.942962,22.942848,22.942765,22.942658,22.942568,22.942485,22.94242,22.942345,22.942253,22.942163,22.942068,22.941982,22.941897,22.941813,22.941722,22.941638,22.94154,22.94146,22.941377,22.941295,22.941195,22.941118,22.941022,22.940937,22.940863,22.940782,22.940698,22.94061,22.940513,22.940437,22.940387,22.940455,22.940508,22.940565,22.940617,22.940672,22.94074,22.940812,22.940877,22.940952,22.94103,22.941107,22.94116,22.941073,22.940973,22.940878,22.940858,22.940938,22.941028,22.941127,22.941243,22.941353,22.94144,22.941538,22.941637,22.941685,22.941742,22.941773,22.941845,22.941942,22.942032,22.942108,22.942187,22.94225,22.942315,22.942383,22.942408,22.942497,22.94255,22.942582,22.942612,22.942658,22.94269,22.942743,22.942803,22.942852,22.942917,22.942988,22.943052,22.943148,22.943265,22.943358,22.943428,22.943472,22.943497,22.94347,22.943462,22.943483,22.943527,22.943612,22.943665,22.943688,22.943705,22.943697,22.943612,22.94351,22.943432,22.943342,22.943268,22.943215,22.943125,22.943038,22.942957,22.94286,22.942762,22.942673,22.942602,22.942502,22.942455,22.94241,22.942357,22.942285,22.942168,22.9421,22.942103,22.942132,22.942173,22.942248,22.942298,22.942328,22.942382,22.942403,22.942428,22.942487,22.94257,22.942617,22.94267,22.942723,22.942782,22.942863,22.942938,22.942993,22.943058,22.943142,22.943208,22.943283,22.943315,22.943353,22.943387,22.943438,22.943438,22.943497,22.943557,22.943605,22.943675,22.943712,22.943793,22.943858,22.943892,22.943852,22.943835,22.943872,22.94391,22.94399,22.944053,22.94412,22.944213,22.94431,22.944423,22.944495,22.944563,22.944632,22.944715,22.944815,22.944895,22.94495,22.945022,22.945062,22.945123,22.94519,22.945217,22.945273,22.945378,22.945463,22.945573,22.945663,22.945758,22.945857,22.945948,22.946043,22.946118,22.946202,22.94631,22.946427,22.946528,22.946642,22.946738,22.946807,22.946875,22.946938,22.946993,22.94704,22.947095,22.947182,22.947288,22.947403,22.947508,22.9476,22.947702,22.947802,22.9479,22.947985,22.948092,22.948173,22.948258,22.948337,22.948407,22.94849,22.94858,22.948687,22.948792,22.948878,22.948935,22.948998,22.949068,22.949137,22.949243,22.949357,22.94944,22.949525,22.9496,22.9497,22.949795,22.949888,22.949967,22.950055,22.950147,22.950232,22.950338,22.95043,22.950518,22.950598,22.950657,22.95073,22.95081,22.950873,22.950935,22.951035,22.951117,22.9512,22.951265,22.951303,22.951317,22.951377,22.951463,22.951527,22.951567,22.95168,22.951705,22.951733,22.95178,22.951848,22.951918,22.95201,22.952087,22.952118,22.952203,22.95232,22.952435,22.952538,22.952653,22.952768,22.952863,22.952925,22.953043,22.953062,22.953168,22.953282,22.95338,22.953487,22.953603,22.953692,22.953803,22.953918,22.954018,22.954128,22.954232,22.954348,22.954458,22.954565,22.95468,22.954785,22.954887,22.955002,22.955108,22.95522,22.955333,22.955437,22.955548,22.95566,22.955777,22.955893,22.955992,22.956095,22.956212,22.956323,22.956415,22.956513,22.95662,22.956737,22.956843,22.956947,22.95704,22.957152,22.95726,22.95735,22.957443,22.957498,22.95752,22.95762,22.957628,22.957702,22.957722,22.957787,22.957782,22.957708,22.957615,22.957522,22.957457,22.957408,22.957355,22.957257,22.957142,22.957048,22.956952,22.956845,22.956733,22.956633,22.956535,22.956455,22.956372,22.956283,22.956203,22.956098,22.956013,22.955922,22.955838,22.95576,22.955663,22.955595,22.955585,22.955565,22.955633,22.95575,22.955855,22.95596,22.956075,22.956183,22.956285,22.956395,22.956497,22.956605,22.956717,22.9568,22.956893,22.956977,22.957067,22.957165,22.957263,22.957368,22.957477,22.95757,22.95766,22.957767,22.957877,22.957987,22.958087,22.958185,22.958282,22.958395,22.958493,22.958587,22.958692,22.958795,22.958898,22.959013,22.959088,22.959112,22.959135,22.959152,22.959147,22.959127,22.95912,22.95912,22.959133,22.959082,22.959025,22.959042,22.959073,22.959102,22.95916,22.959228,22.959278,22.95935,22.959407,22.95945,22.959477,22.959518,22.95946,22.959343,22.959315,22.959315],1,null,null,{"interactive":true,"className":"","stroke":true,"color":"darkmagenta","weight":5,"opacity":0.7,"fill":true,"fillColor":"darkmagenta","fillOpacity":0.2},null,null,null,{"interactive":false,"permanent":false,"direction":"auto","opacity":1,"offset":[0,0],"textsize":"10px","textOnly":false,"className":"","sticky":true},null,null]},{"method":"addCircles","args":[[40.643087,40.64301,40.642932,40.642855,40.642777,40.642698,40.642633,40.642555,40.642477,40.64239,40.642317,40.642253,40.642172,40.6421,40.642125,40.64216,40.642208,40.642242,40.64228,40.642305,40.642325,40.642335,40.642362,40.642407,40.642433,40.642482,40.64252,40.642557,40.642553,40.642558,40.642587,40.642628,40.642657,40.642723,40.64275,40.642793,40.642848,40.642863,40.642907,40.642947,40.642977,40.643002,40.643007,40.643033,40.64305,40.643073,40.643085,40.64313,40.643173,40.643187,40.643192,40.643205,40.64321,40.643222,40.643167,40.643092,40.643027,40.643007,40.64304,40.643098,40.643163,40.643178,40.643233,40.643245,40.643277,40.643283,40.64328,40.643272,40.643253,40.643268,40.643318,40.643355,40.643405,40.643463,40.64351,40.643562,40.643603,40.643672,40.643748,40.643828,40.6439,40.64398,40.644042,40.644127,40.644207,40.64428,40.644362,40.644447,40.644525,40.644575,40.644632,40.644683,40.64473,40.644772,40.644827,40.644877,40.64492,40.644963,40.644982,40.645023,40.644982,40.644907,40.644882,40.64494,40.645017,40.645093,40.645168,40.645228,40.645277,40.64525,40.645217,40.645173,40.645125,40.64507,40.645022,40.64496,40.644893,40.644835,40.644802,40.644747,40.644678,40.64461,40.644542,40.644475,40.644425,40.644372,40.644305,40.644238,40.644167,40.644088,40.644022,40.643967,40.643912,40.643847,40.643797,40.643755,40.64371,40.643667,40.643612,40.643562,40.643518,40.643483,40.643433,40.643388,40.643373,40.643333,40.643292,40.643238,40.643202,40.643193,40.643197,40.643202,40.6432,40.643172,40.643142,40.64311,40.643065,40.643043,40.64299,40.642998,40.642983,40.64295,40.642893,40.642845,40.642835,40.642795,40.642792,40.642772,40.642725,40.642648,40.642617,40.642582,40.642528,40.642523,40.64249,40.642437,40.642372,40.642335,40.642347,40.642398,40.64247,40.64253,40.64261,40.642672,40.642728,40.642793,40.642838,40.642847,40.642877,40.64295,40.64302,40.643087,40.643123,40.643112,40.643075,40.643075,40.643068,40.643128,40.643148,40.643148],[22.959437,22.959492,22.959457,22.959417,22.959387,22.959342,22.959287,22.959242,22.959208,22.959213,22.959145,22.959063,22.959025,22.95897,22.958878,22.958793,22.958698,22.958592,22.958497,22.958388,22.95829,22.958175,22.958063,22.957965,22.957853,22.957763,22.957665,22.957558,22.957458,22.957347,22.957242,22.957158,22.957047,22.956982,22.956873,22.956773,22.956682,22.956568,22.956487,22.956388,22.956285,22.956182,22.956068,22.955975,22.95587,22.95576,22.955648,22.95556,22.955475,22.955368,22.95527,22.955165,22.95505,22.954935,22.954855,22.954817,22.954735,22.954627,22.954537,22.95447,22.954398,22.954295,22.954202,22.9541,22.954022,22.953917,22.953813,22.9537,22.953588,22.953473,22.953387,22.953293,22.953215,22.953127,22.953045,22.952958,22.95287,22.952795,22.952735,22.952697,22.952672,22.95265,22.952583,22.952557,22.952522,22.95249,22.95245,22.95244,22.952388,22.952302,22.95221,22.952118,22.952037,22.95194,22.951852,22.951768,22.951668,22.951567,22.951465,22.951367,22.951273,22.951213,22.951117,22.951197,22.951238,22.951287,22.951348,22.951418,22.9515,22.951607,22.951708,22.951803,22.951885,22.951977,22.952072,22.952153,22.952232,22.95231,22.952417,22.952495,22.952568,22.952632,22.952708,22.952773,22.952848,22.952942,22.95301,22.95307,22.953117,22.953158,22.953217,22.953295,22.953388,22.953465,22.953558,22.953643,22.953733,22.953823,22.953897,22.953993,22.954097,22.954198,22.954288,22.954375,22.954478,22.954582,22.954682,22.954762,22.954853,22.954965,22.955067,22.955172,22.955287,22.955397,22.9555,22.95561,22.955692,22.955802,22.955895,22.956,22.956117,22.956225,22.956303,22.956402,22.95651,22.956608,22.956708,22.95682,22.95691,22.95695,22.95705,22.957143,22.957228,22.957335,22.95743,22.957518,22.957595,22.95769,22.957802,22.957895,22.95796,22.958042,22.95808,22.958165,22.958257,22.958322,22.958422,22.958527,22.958622,22.958683,22.958752,22.958815,22.958913,22.95903,22.95912,22.959227,22.959315,22.9594,22.959408,22.959408],1,null,null,{"interactive":true,"className":"","stroke":true,"color":"firebrick","weight":5,"opacity":0.7,"fill":true,"fillColor":"firebrick","fillOpacity":0.2},null,null,null,{"interactive":false,"permanent":false,"direction":"auto","opacity":1,"offset":[0,0],"textsize":"10px","textOnly":false,"className":"","sticky":true},null,null]},{"method":"addCircles","args":[[40.643043,40.643062,40.643097,40.643168,40.643255,40.643338,40.643412,40.643495,40.643577,40.643665,40.643742,40.643808,40.643885,40.64396,40.64403,40.644115,40.644203,40.644262,40.644305,40.644352,40.644383,40.644408,40.644423,40.644427,40.644437,40.644458,40.644483,40.644522,40.644577,40.64465,40.644708,40.64467,40.644702,40.644685,40.644728,40.644767,40.644795,40.644852,40.644907,40.644965,40.645013,40.645043,40.64505,40.645087,40.645122,40.645057,40.644982,40.64491,40.644872,40.644808,40.644727,40.644798,40.644875,40.644945,40.645023,40.6451,40.645178,40.645262,40.6453,40.645327,40.645348,40.645415,40.645495,40.645575,40.645662,40.645737,40.645818,40.645893,40.645977,40.646062,40.646135,40.646213,40.646298,40.646373,40.646445,40.646527,40.6466,40.646675,40.646747,40.646818,40.646882,40.646958,40.647027,40.647102,40.647158,40.647227,40.647283,40.647342,40.647405,40.647455,40.647507,40.647563,40.64761,40.647663,40.64772,40.647763,40.647803,40.647843,40.647885,40.64792,40.64796,40.648015,40.648053,40.648105,40.648168,40.648225,40.64828,40.648342,40.648403,40.648488,40.648567,40.648643,40.648725,40.648795,40.648838,40.648873,40.648922,40.648968,40.649005,40.649048,40.649052,40.649067,40.649107,40.649148,40.649187,40.649222,40.64924,40.649278,40.649295,40.649293,40.649315,40.649335,40.649337,40.649353,40.64939,40.649423,40.649422,40.6494,40.649375,40.649328,40.649283,40.6492,40.649142,40.649063,40.648997,40.648968,40.64894,40.648903,40.648903,40.648873,40.648812,40.648813,40.648808,40.64878,40.648718,40.648678,40.648687,40.64866,40.648613,40.648537,40.64848,40.648427,40.648355,40.648278,40.648195,40.648117,40.648037,40.64796,40.647885,40.647807,40.647722,40.647638,40.647565,40.647485,40.647397,40.647318,40.647237,40.64716,40.647078,40.646993,40.646918,40.64684,40.646767,40.64669,40.646607,40.646522,40.646457,40.646378,40.646297,40.64624,40.646223,40.64621,40.646182,40.6461,40.646017,40.645938,40.645863,40.645788,40.645702,40.645683,40.645687,40.645647,40.645573,40.645492,40.645403,40.645335,40.645295,40.645275,40.645252,40.64522,40.645183,40.645128,40.64504,40.644975,40.644917,40.644838,40.644767,40.644682,40.644597,40.644517,40.644432,40.644347,40.644275,40.644197,40.64411,40.644022,40.643943,40.64387,40.643782,40.643695,40.643618,40.64353,40.643448,40.643363,40.64328,40.643192,40.643115,40.64304,40.642957,40.642887,40.642815,40.642745,40.642697,40.642667,40.642635,40.642618,40.642587,40.642552,40.642535,40.642493,40.642478,40.642457,40.642432,40.642412,40.642357,40.642312,40.642308,40.642273,40.642255,40.642243,40.642242,40.642233,40.642202,40.642188,40.642225,40.642288,40.642363,40.642448,40.642517,40.642582,40.642668,40.64275,40.642825,40.64289,40.642965,40.643032,40.643067,40.643073,40.643082,40.643095,40.643117,40.643117,40.643115,40.643137,40.643138,40.643095,40.643082,40.643082],[22.959357,22.95947,22.959567,22.959617,22.959643,22.959653,22.959615,22.959628,22.959637,22.959637,22.959635,22.959572,22.959543,22.959505,22.959498,22.959483,22.959478,22.959548,22.959632,22.959712,22.959817,22.959928,22.960032,22.96015,22.960258,22.96037,22.960483,22.960588,22.960672,22.96072,22.96081,22.960915,22.961023,22.961138,22.961232,22.961337,22.961447,22.961532,22.961605,22.961688,22.961782,22.961892,22.961997,22.9621,22.962208,22.962133,22.962175,22.962238,22.962337,22.962397,22.962418,22.962362,22.962318,22.96228,22.962268,22.962268,22.962277,22.962308,22.96241,22.962522,22.962628,22.962707,22.962692,22.96267,22.962657,22.962643,22.962618,22.962568,22.96253,22.962517,22.962535,22.962588,22.96259,22.962557,22.962517,22.96248,22.962435,22.962395,22.962325,22.962255,22.962195,22.962145,22.962087,22.96203,22.961958,22.961883,22.961792,22.96172,22.961648,22.961573,22.9615,22.961423,22.961342,22.96127,22.96119,22.961103,22.961008,22.960907,22.960822,22.960725,22.960622,22.96054,22.960437,22.960362,22.96031,22.960245,22.960177,22.960113,22.960058,22.96004,22.960013,22.959972,22.959947,22.960002,22.960087,22.960192,22.960288,22.960383,22.960468,22.960568,22.960683,22.96079,22.960888,22.960978,22.961073,22.961172,22.961282,22.961383,22.961488,22.961595,22.961693,22.961792,22.961897,22.961998,22.962103,22.962207,22.962307,22.962413,22.962513,22.962607,22.962708,22.96275,22.962817,22.962857,22.962935,22.963038,22.963127,22.963215,22.963318,22.963415,22.963473,22.963577,22.963682,22.963783,22.963857,22.963958,22.964062,22.964157,22.964243,22.9643,22.96439,22.964478,22.964515,22.96456,22.964598,22.964618,22.96464,22.964668,22.964667,22.964692,22.96469,22.964668,22.964647,22.964657,22.964672,22.964672,22.964673,22.964702,22.964733,22.96474,22.964742,22.964783,22.964753,22.964713,22.964717,22.964748,22.96475,22.964722,22.964687,22.964602,22.964512,22.964405,22.964305,22.96431,22.964338,22.964297,22.964257,22.964195,22.964175,22.964065,22.963955,22.963853,22.963793,22.963782,22.963762,22.963692,22.963595,22.963492,22.963387,22.963293,22.963188,22.963097,22.963097,22.96302,22.962955,22.962963,22.963005,22.963042,22.963077,22.9631,22.96313,22.96316,22.963172,22.963183,22.963188,22.96318,22.963175,22.96318,22.963185,22.963193,22.963202,22.96322,22.963227,22.963235,22.963215,22.963212,22.96318,22.963133,22.963112,22.963095,22.963062,22.963018,22.96293,22.96283,22.96273,22.962625,22.96254,22.962448,22.962343,22.962248,22.962143,22.962035,22.961923,22.961832,22.961753,22.961665,22.96155,22.961465,22.961352,22.961235,22.961132,22.961015,22.960925,22.960837,22.960732,22.96066,22.960638,22.960663,22.960728,22.960782,22.96078,22.960732,22.960705,22.960665,22.960625,22.960548,22.960447,22.96033,22.960222,22.960123,22.960012,22.959903,22.959798,22.959695,22.959585,22.959482,22.959448,22.959448],1,null,null,{"interactive":true,"className":"","stroke":true,"color":"deepskyblue","weight":5,"opacity":0.7,"fill":true,"fillColor":"deepskyblue","fillOpacity":0.2},null,null,null,{"interactive":false,"permanent":false,"direction":"auto","opacity":1,"offset":[0,0],"textsize":"10px","textOnly":false,"className":"","sticky":true},null,null]},{"method":"addCircles","args":[[40.642927,40.64296,40.64303,40.642958,40.642887,40.642807,40.642743,40.642688,40.642618,40.642543,40.642468,40.642395,40.642342,40.642278,40.642193,40.642113,40.642038,40.641958,40.64188,40.6418,40.641788,40.641792,40.641807,40.641835,40.641853,40.641843,40.641847,40.641867,40.641813,40.641812,40.641847,40.641887,40.641902,40.641928,40.641975,40.642007,40.642038,40.64207,40.642093,40.642122,40.642148,40.642183,40.642228,40.642238,40.642222,40.642272,40.642308,40.642312,40.642312,40.64233,40.64236,40.642402,40.642355,40.642303,40.642302,40.642295,40.642283,40.642268,40.642207,40.64216,40.642188,40.64222,40.642277,40.642328,40.642348,40.642368,40.642425,40.642508,40.642575,40.642603,40.64264,40.642673,40.64275,40.642832,40.642905,40.64285,40.64277,40.642698,40.642638,40.642623,40.642608,40.642577,40.64254,40.64249,40.642438,40.642408,40.642392,40.642355,40.64233,40.64231,40.642272,40.642257,40.642263,40.642237,40.642252,40.642253,40.642322,40.642403,40.642483,40.64256,40.642623,40.642688,40.642733,40.642807,40.642868,40.642907,40.642902,40.642925,40.642965,40.64295,40.642925,40.642892,40.642848,40.6428,40.642762,40.642723,40.642672,40.642632,40.642603,40.642573,40.642538,40.642515,40.642488,40.642487,40.642467,40.642427,40.642363,40.64234,40.642308,40.642307,40.642292,40.642288,40.642292,40.642265,40.642223,40.642253,40.642312,40.642388,40.642452,40.64252,40.642593,40.64268,40.64275,40.642823,40.642898,40.642983,40.643038,40.643037,40.643037],[22.959448,22.959458,22.959477,22.959518,22.959532,22.959508,22.959447,22.959358,22.959308,22.95927,22.959223,22.959187,22.959093,22.959033,22.959005,22.95903,22.959053,22.95909,22.959033,22.958982,22.958885,22.958772,22.958658,22.958562,22.958467,22.958353,22.95824,22.958125,22.958045,22.957943,22.95784,22.957743,22.957645,22.95755,22.957452,22.957345,22.957243,22.957152,22.957042,22.956945,22.956857,22.956758,22.956662,22.956548,22.956437,22.956343,22.956245,22.956128,22.95602,22.955908,22.955815,22.955725,22.955632,22.955543,22.955432,22.955325,22.955223,22.955123,22.955038,22.954952,22.954848,22.954743,22.954657,22.954572,22.954462,22.954368,22.954287,22.954307,22.95423,22.954122,22.954022,22.953925,22.953872,22.953827,22.953773,22.953685,22.953647,22.953635,22.953705,22.953807,22.95392,22.954012,22.954113,22.95421,22.954287,22.954373,22.954488,22.954583,22.954692,22.954805,22.954888,22.95499,22.955105,22.955208,22.955322,22.955432,22.955495,22.955512,22.955542,22.955555,22.955613,22.955672,22.955773,22.955817,22.95589,22.955977,22.956083,22.956187,22.956272,22.956382,22.956495,22.956597,22.956683,22.956758,22.956865,22.956963,22.957055,22.957148,22.957247,22.957348,22.957438,22.95753,22.957632,22.95773,22.957833,22.957928,22.95801,22.958117,22.958218,22.958327,22.958432,22.958545,22.958663,22.958767,22.958855,22.958963,22.95905,22.95911,22.959178,22.959243,22.959312,22.959342,22.959408,22.959463,22.959502,22.95953,22.959443,22.959362,22.959362],1,null,null,{"interactive":true,"className":"","stroke":true,"color":"darkorchid4","weight":5,"opacity":0.7,"fill":true,"fillColor":"darkorchid4","fillOpacity":0.2},null,null,null,{"interactive":false,"permanent":false,"direction":"auto","opacity":1,"offset":[0,0],"textsize":"10px","textOnly":false,"className":"","sticky":true},null,null]},{"method":"addCircles","args":[[40.64294,40.64302,40.643107,40.643028,40.642953,40.64287,40.642822,40.642742,40.642657,40.642568,40.642485,40.642418,40.642367,40.642283,40.642202,40.642122,40.642035,40.641957,40.641877,40.641798,40.641713,40.641627,40.641538,40.641457,40.641385,40.641307,40.641248,40.641205,40.64115,40.641222,40.641275,40.641337,40.641373,40.64142,40.64145,40.641478,40.641495,40.64152,40.641597,40.641665,40.641732,40.641795,40.641825,40.641823,40.641827,40.641802,40.64176,40.641708,40.64168,40.641677,40.641685,40.641668,40.641658,40.64166,40.641678,40.641635,40.6416,40.641553,40.6415,40.64143,40.641375,40.641332,40.641288,40.641277,40.641248,40.64121,40.641202,40.64119,40.64124,40.641292,40.64134,40.641395,40.641412,40.641385,40.641317,40.64124,40.641152,40.6411,40.64103,40.641035,40.641037,40.641012,40.640987,40.640967,40.64095,40.640893,40.640845,40.640813,40.640822,40.64084,40.640873,40.640875,40.640917,40.640902,40.640987,40.640928,40.640865,40.6408,40.640712,40.640623,40.640612,40.640703,40.640713,40.64065,40.640627,40.640592,40.64054,40.640487,40.640435,40.64039,40.64033,40.640268,40.640232,40.640167,40.640088,40.640015,40.639965,40.639943,40.639907,40.639872,40.639877,40.63986,40.639882,40.639867,40.639857,40.639883,40.639905,40.639865,40.639833,40.639835,40.63991,40.63991,40.639887,40.63987,40.639818,40.63975,40.63967,40.639583,40.6395,40.639465,40.639453,40.639482,40.6395,40.639522,40.63955,40.639578,40.639618,40.63965,40.639687,40.639732,40.639775,40.639813,40.639873,40.639937,40.640022,40.640097,40.640167,40.64019,40.640225,40.640262,40.640295,40.640332,40.640375,40.640408,40.640447,40.640505,40.64055,40.640582,40.64063,40.640667,40.640712,40.640758,40.640813,40.64086,40.64091,40.640962,40.64101,40.641055,40.641103,40.641153,40.641207,40.641245,40.641285,40.64134,40.641378,40.641433,40.641492,40.641537,40.641583,40.641638,40.641688,40.641735,40.641793,40.64186,40.641943,40.642028,40.642117,40.642165,40.642182,40.64219,40.642198,40.642187,40.642173,40.642137,40.642097,40.642077,40.64204,40.642023,40.641997,40.641972,40.641935,40.641893,40.641842,40.641772,40.641735,40.641695,40.641667,40.641633,40.641622,40.641598,40.641583,40.641552,40.641513,40.641493,40.641463,40.641458,40.641427,40.641407,40.641373,40.641338,40.641323,40.641355,40.641443,40.641523,40.641595,40.64167,40.641743,40.641823,40.641902,40.641978,40.642058,40.642133,40.64222,40.6423,40.642383,40.64246,40.642517,40.642582,40.642642,40.642703,40.642768,40.64284,40.642927,40.643005,40.643078,40.643097,40.643112,40.643112],[22.95957,22.959518,22.959537,22.959508,22.959465,22.95943,22.959355,22.959305,22.959275,22.959295,22.959298,22.959245,22.959152,22.959112,22.959085,22.959088,22.959113,22.959132,22.959178,22.959172,22.959177,22.959193,22.959172,22.959147,22.95909,22.959043,22.959132,22.959228,22.95931,22.959358,22.959442,22.959512,22.959603,22.959698,22.959798,22.959907,22.960015,22.960122,22.96017,22.960247,22.960315,22.960398,22.960505,22.960532,22.960623,22.960707,22.96081,22.960907,22.961018,22.961123,22.961237,22.96135,22.961457,22.961567,22.961673,22.961767,22.961855,22.961938,22.962023,22.962095,22.962177,22.962262,22.962357,22.962467,22.962563,22.962658,22.962765,22.962873,22.962968,22.963043,22.963128,22.963215,22.96332,22.963432,22.963482,22.963487,22.96347,22.963398,22.963328,22.963223,22.963105,22.962998,22.962887,22.962772,22.962657,22.962572,22.962487,22.96238,22.962497,22.9626,22.962698,22.962813,22.962917,22.963027,22.963063,22.963067,22.963138,22.963213,22.963217,22.963237,22.963295,22.963318,22.96336,22.963445,22.963338,22.963233,22.963148,22.963062,22.962978,22.962877,22.962807,22.962723,22.962625,22.962563,22.962512,22.962473,22.962392,22.962287,22.96218,22.962085,22.961982,22.961875,22.961778,22.961677,22.961575,22.961463,22.961368,22.961278,22.961187,22.961075,22.961012,22.9609,22.960788,22.960677,22.960588,22.96054,22.960498,22.960468,22.960435,22.960338,22.960222,22.96012,22.960015,22.959918,22.95981,22.959712,22.959612,22.959503,22.959403,22.959308,22.959225,22.959143,22.959068,22.95899,22.958977,22.95895,22.958888,22.958787,22.958682,22.958575,22.958467,22.958368,22.958267,22.958173,22.958085,22.958013,22.957918,22.957813,22.957735,22.95764,22.957557,22.957468,22.95739,22.9573,22.95721,22.957115,22.957023,22.956922,22.95684,22.956742,22.956655,22.956563,22.95648,22.956392,22.9563,22.956218,22.95613,22.956045,22.955952,22.955862,22.955775,22.955683,22.955615,22.95555,22.955537,22.955507,22.955518,22.95561,22.955722,22.955833,22.95595,22.956053,22.956157,22.956255,22.956353,22.956465,22.956557,22.956667,22.956767,22.956863,22.956962,22.957055,22.957147,22.957215,22.957313,22.957417,22.957515,22.957623,22.957728,22.957832,22.957938,22.958033,22.95814,22.958252,22.958355,22.958458,22.958558,22.958672,22.958763,22.958865,22.958973,22.959082,22.95909,22.95913,22.959157,22.959125,22.959078,22.959067,22.959097,22.95914,22.959123,22.959077,22.959048,22.959063,22.959072,22.95912,22.959203,22.959253,22.959337,22.959385,22.95945,22.959517,22.959545,22.95958,22.959533,22.959428,22.959347,22.959347],1,null,null,{"interactive":true,"className":"","stroke":true,"color":"darkseagreen","weight":5,"opacity":0.7,"fill":true,"fillColor":"darkseagreen","fillOpacity":0.2},null,null,null,{"interactive":false,"permanent":false,"direction":"auto","opacity":1,"offset":[0,0],"textsize":"10px","textOnly":false,"className":"","sticky":true},null,null]},{"method":"addCircles","args":[[40.642863,40.642918,40.642992,40.64303,40.642942,40.642875,40.64279,40.642713,40.642633,40.64256,40.642478,40.642402,40.642342,40.64229,40.64221,40.64213,40.642047,40.641975,40.641887,40.641803,40.641747,40.641665,40.641582,40.641502,40.64142,40.641408,40.641425,40.641413,40.641472,40.641442,40.641508,40.64158,40.641623,40.641597,40.641517,40.641502,40.641522,40.641437,40.641468,40.641413,40.64134,40.641322,40.641333,40.641357,40.641388,40.641417,40.64144,40.641435,40.641452,40.64149,40.641503,40.641522,40.641552,40.641575,40.641615,40.641643,40.64167,40.641712,40.641777,40.641808,40.641852,40.641847,40.641872,40.641883,40.641912,40.641933,40.641945,40.641982,40.642015,40.642048,40.642077,40.642077,40.642097,40.642057,40.641998,40.641912,40.641855,40.641818,40.641787,40.641755,40.641687,40.641613,40.64155,40.6415,40.641475,40.64144,40.641413,40.641357,40.641322,40.641268,40.64121,40.64115,40.64113,40.64105,40.64099,40.640955,40.640923,40.640895,40.640843,40.64079,40.64071,40.64068,40.64066,40.640603,40.640563,40.640543,40.640505,40.640447,40.640377,40.640332,40.64026,40.640238,40.640223,40.640188,40.640112,40.640058,40.640045,40.639992,40.639907,40.639835,40.639795,40.639768,40.639738,40.639697,40.639668,40.639617,40.639587,40.639545,40.639503,40.639492,40.639493,40.639462,40.639493,40.639405,40.639328,40.63927,40.639253,40.639247,40.639232,40.639203,40.63916,40.639112,40.639057,40.639005,40.638942,40.638873,40.638825,40.638748,40.638677,40.638607,40.638532,40.638458,40.638383,40.638302,40.638228,40.63817,40.638113,40.63808,40.638025,40.637972,40.63795,40.637953,40.63798,40.638,40.638012,40.638027,40.638018,40.638023,40.638013,40.638,40.637972,40.637928,40.637865,40.63783,40.637768,40.6377,40.637625,40.63754,40.63748,40.637442,40.637403,40.637358,40.637303,40.637233,40.637167,40.637132,40.637073,40.637035,40.637042,40.637095,40.637158,40.637222,40.637277,40.63734,40.637372,40.637395,40.637432,40.637483,40.637558,40.637637,40.637703,40.637757,40.637812,40.63787,40.63791,40.63792,40.63793,40.637937,40.63794,40.637932,40.637947,40.637932,40.6379,40.637877,40.637862,40.63788,40.637917,40.637965,40.638017,40.638073,40.638143,40.638217,40.6383,40.63838,40.638447,40.638512,40.638572,40.638642,40.638723,40.638797,40.638875,40.638932,40.639002,40.639073,40.639115,40.639172,40.639228,40.63929,40.639362,40.639395,40.639425,40.639378,40.639383,40.639422,40.639447,40.63947,40.639502,40.639527,40.639555,40.639598,40.639638,40.639698,40.63975,40.639795,40.639827,40.639882,40.639928,40.640003,40.640068,40.64012,40.640162,40.640208,40.640238,40.640287,40.640322,40.640377,40.64044,40.640473,40.640508,40.640538,40.640588,40.640633,40.640688,40.64072,40.640763,40.640797,40.640847,40.640907,40.640952,40.641015,40.641067,40.641105,40.641157,40.641212,40.641262,40.641315,40.641367,40.64141,40.641467,40.641512,40.641553,40.641612,40.641657,40.641723,40.641758,40.641805,40.641877,40.641958,40.642047,40.642132,40.642172,40.642243,40.642317,40.642397,40.642478,40.642555,40.642638,40.64271,40.642778,40.64284,40.642898,40.642932,40.642948,40.64295,40.642965,40.642957,40.642922,40.642878,40.642838,40.642787,40.64274,40.642705,40.642657,40.64263,40.64259,40.642542,40.642505,40.642435,40.642388,40.642343,40.64232,40.642323,40.642293,40.642273,40.642262,40.642262,40.642258,40.642262,40.642238,40.642195,40.6422,40.642268,40.642337,40.642403,40.642472,40.642553,40.642612,40.642667,40.642733,40.642807,40.642872,40.64295,40.64303,40.64302,40.643008,40.643008],[22.959415,22.959398,22.959457,22.959563,22.959563,22.959502,22.959477,22.959422,22.959375,22.959325,22.95929,22.959255,22.959185,22.959092,22.959053,22.959057,22.959045,22.959108,22.95911,22.959102,22.959168,22.959212,22.959222,22.959202,22.959165,22.95906,22.958947,22.95883,22.95875,22.958642,22.958582,22.958648,22.958752,22.958647,22.958668,22.958783,22.958888,22.958887,22.95899,22.959073,22.959022,22.95892,22.958805,22.958692,22.958582,22.958475,22.958375,22.958272,22.958172,22.958083,22.957977,22.957868,22.957768,22.95767,22.957577,22.957478,22.957375,22.957275,22.957193,22.957087,22.956995,22.956888,22.95679,22.95668,22.956587,22.956482,22.956385,22.956278,22.956177,22.956077,22.955968,22.95585,22.955743,22.95565,22.955613,22.955588,22.955502,22.955593,22.955703,22.9558,22.95586,22.955892,22.955972,22.956047,22.95614,22.956227,22.956327,22.956412,22.956517,22.956608,22.956693,22.956768,22.956872,22.956898,22.956978,22.957077,22.957175,22.957287,22.95738,22.95746,22.957502,22.957587,22.957702,22.957793,22.957887,22.958002,22.958107,22.95818,22.958243,22.958345,22.958415,22.958508,22.958607,22.958708,22.958742,22.958807,22.958908,22.958998,22.959035,22.959105,22.9592,22.95931,22.959403,22.959505,22.959608,22.959702,22.959802,22.959897,22.959985,22.960085,22.960197,22.9603,22.960407,22.960423,22.960467,22.960557,22.960612,22.960718,22.960832,22.960923,22.961018,22.961113,22.961193,22.961278,22.961343,22.961415,22.961497,22.961533,22.961565,22.961598,22.961638,22.961665,22.961715,22.961753,22.961813,22.961887,22.96196,22.962058,22.962142,22.962233,22.962347,22.962452,22.962563,22.96267,22.962775,22.96289,22.963007,22.96312,22.963237,22.96334,22.963443,22.963537,22.963617,22.963722,22.9638,22.963867,22.963925,22.963948,22.964023,22.96412,22.964215,22.964303,22.964392,22.964448,22.96451,22.964608,22.964677,22.964765,22.964655,22.96457,22.964493,22.964432,22.964363,22.964288,22.964192,22.964098,22.963997,22.963913,22.963852,22.963807,22.963738,22.963668,22.963582,22.963515,22.963418,22.96331,22.963195,22.96308,22.962972,22.962867,22.962763,22.962647,22.962552,22.962455,22.962345,22.962238,22.96214,22.962063,22.961975,22.961888,22.961822,22.961763,22.961732,22.961682,22.961623,22.961605,22.961537,22.961503,22.961483,22.961433,22.961378,22.9613,22.961237,22.961175,22.961085,22.96101,22.960918,22.960852,22.96079,22.960685,22.960577,22.960492,22.960385,22.960278,22.96018,22.960072,22.95997,22.95987,22.959772,22.959682,22.959583,22.959505,22.959408,22.95931,22.959212,22.959132,22.959042,22.95901,22.958958,22.958872,22.958775,22.958675,22.958577,22.958497,22.95839,22.958308,22.958238,22.958145,22.958038,22.957932,22.957838,22.957753,22.957673,22.957565,22.957468,22.957372,22.957285,22.957217,22.957115,22.95704,22.956945,22.956852,22.95677,22.956682,22.956593,22.956498,22.956425,22.956325,22.956237,22.956148,22.95605,22.955968,22.955873,22.955808,22.955712,22.955617,22.95556,22.955522,22.955503,22.955533,22.955635,22.955578,22.955617,22.955638,22.955673,22.95571,22.955708,22.95576,22.955817,22.955873,22.955958,22.956057,22.956153,22.956265,22.956363,22.956468,22.956557,22.956655,22.956748,22.956843,22.956933,22.957042,22.957135,22.95724,22.957335,22.957422,22.957525,22.957588,22.957688,22.957777,22.957872,22.957988,22.958092,22.958197,22.958305,22.95841,22.958518,22.958628,22.95874,22.958843,22.958955,22.959015,22.959073,22.959152,22.959217,22.959252,22.95933,22.95941,22.959477,22.959532,22.959588,22.959628,22.959583,22.959472,22.959432,22.959432],1,null,null,{"interactive":true,"className":"","stroke":true,"color":"deeppink","weight":5,"opacity":0.7,"fill":true,"fillColor":"deeppink","fillOpacity":0.2},null,null,null,{"interactive":false,"permanent":false,"direction":"auto","opacity":1,"offset":[0,0],"textsize":"10px","textOnly":false,"className":"","sticky":true},null,null]},{"method":"addCircles","args":[[40.642967,40.642967,40.64299,40.643073,40.643127,40.643092,40.643077,40.643077,40.643227,40.643138,40.64307,40.642985,40.642902,40.64284,40.642762,40.642693,40.642617,40.642543,40.642467,40.64241,40.642332,40.642248,40.642168,40.64209,40.642007,40.64192,40.641843,40.64177,40.64169,40.641612,40.641533,40.641453,40.641387,40.641303,40.64124,40.641197,40.64113,40.641078,40.641013,40.640947,40.640883,40.640805,40.640728,40.640697,40.640635,40.640553,40.640483,40.640448,40.640478,40.640408,40.640328,40.64025,40.640182,40.640117,40.640052,40.63998,40.639922,40.639907,40.639913,40.63992,40.639883,40.639848,40.639823,40.639882,40.639938,40.639917,40.639868,40.639825,40.639763,40.639697,40.639615,40.63955,40.639637,40.63969,40.639658,40.639637,40.639625,40.639597,40.639578,40.639565,40.639547,40.639528,40.639515,40.639538,40.639508,40.63945,40.63943,40.63943,40.639408,40.639353,40.639283,40.639208,40.639125,40.639037,40.638982,40.638932,40.638863,40.638805,40.638732,40.638648,40.638562,40.638488,40.638413,40.638338,40.638258,40.638175,40.638093,40.638165,40.638158,40.638095,40.638038,40.637998,40.637967,40.637943,40.637883,40.637978,40.637955,40.63798,40.638005,40.638027,40.638057,40.638057,40.63806,40.63804,40.638023,40.637988,40.637953,40.63792,40.637888,40.637828,40.637755,40.637677,40.637598,40.637523,40.63746,40.637408,40.637378,40.637328,40.637305,40.637267,40.6372,40.637117,40.637058,40.637013,40.637032,40.637082,40.637135,40.637207,40.637272,40.63733,40.637363,40.637407,40.637447,40.637517,40.63759,40.637653,40.637727,40.6378,40.637843,40.637893,40.63794,40.637975,40.637998,40.63799,40.637987,40.637982,40.637992,40.63799,40.637988,40.637985,40.637962,40.637937,40.637937,40.637975,40.63803,40.6381,40.638167,40.638227,40.638307,40.638395,40.638472,40.638553,40.638635,40.63872,40.638782,40.638837,40.638895,40.638925,40.639008,40.639093,40.639155,40.639207,40.639255,40.639302,40.639348,40.639405,40.639455,40.639467,40.639475,40.639503,40.639558,40.639582,40.639582,40.639613,40.63965,40.639683,40.639717,40.63975,40.639792,40.639868,40.639913,40.639943,40.640018,40.640102,40.640172,40.640228,40.640285,40.640322,40.640357,40.640398,40.640448,40.6405,40.640527,40.640533,40.64057,40.640627,40.640658,40.640683,40.640722,40.640775,40.640827,40.64089,40.640932,40.640975,40.641037,40.641105,40.641148,40.641162,40.641193,40.64124,40.641293,40.641343,40.641377,40.641422,40.641473,40.641533,40.641588,40.641622,40.641665,40.641697,40.641735,40.641792,40.641843,40.641922,40.642003,40.642085,40.642132,40.642123,40.6421,40.6421,40.642082,40.642053,40.642007,40.641968,40.642012,40.642005,40.64199,40.641977,40.64195,40.641925,40.641888,40.641852,40.641813,40.641803,40.641763,40.641725,40.641687,40.641652,40.641623,40.64161,40.64159,40.641553,40.64152,40.641503,40.641475,40.641438,40.641408,40.641382,40.64137,40.641373,40.641453,40.641533,40.641612,40.641692,40.64177,40.641853,40.641925,40.642008,40.642078,40.642165,40.642247,40.642332,40.642417,40.642482,40.642558,40.642637,40.6427,40.642773,40.642848,40.64292,40.642992,40.643065,40.643078,40.64307,40.64307],[22.959392,22.959392,22.959522,22.959527,22.959568,22.959648,22.959452,22.959402,22.959488,22.959495,22.959455,22.959423,22.959425,22.959352,22.9593,22.959325,22.959322,22.959265,22.95921,22.95913,22.959075,22.959055,22.959027,22.95906,22.959053,22.959067,22.959102,22.959127,22.959162,22.959162,22.959123,22.959073,22.95903,22.959052,22.95912,22.959213,22.959288,22.959373,22.95944,22.959515,22.959592,22.959635,22.959668,22.959768,22.959848,22.9598,22.959733,22.959833,22.95994,22.959868,22.959827,22.959778,22.959713,22.959632,22.95955,22.959508,22.959425,22.959318,22.959205,22.959092,22.959,22.958898,22.958787,22.958862,22.95895,22.95905,22.959123,22.959207,22.959272,22.959348,22.959302,22.959233,22.959263,22.95935,22.95945,22.959558,22.959668,22.959777,22.95989,22.95999,22.96009,22.96019,22.960297,22.960405,22.960515,22.960597,22.960712,22.960828,22.960938,22.961027,22.961092,22.961147,22.96118,22.961162,22.961243,22.961338,22.961395,22.96148,22.961545,22.961587,22.961617,22.96167,22.961725,22.961758,22.961757,22.961755,22.96171,22.961647,22.96176,22.961837,22.961927,22.962017,22.962125,22.962228,22.962265,22.962272,22.96238,22.962487,22.962597,22.962698,22.962798,22.96291,22.963025,22.963133,22.963248,22.963345,22.963447,22.963542,22.963647,22.96373,22.963787,22.963843,22.963877,22.963923,22.963993,22.96408,22.964187,22.964278,22.964388,22.964492,22.964558,22.964588,22.964678,22.964767,22.964662,22.964567,22.964495,22.96443,22.964355,22.96429,22.9642,22.964102,22.964003,22.963932,22.963877,22.963812,22.963763,22.96371,22.963628,22.963537,22.963438,22.96333,22.96323,22.963123,22.963017,22.962913,22.962802,22.962685,22.96258,22.962468,22.962357,22.962245,22.962133,22.962027,22.961945,22.961873,22.961828,22.961755,22.961715,22.961695,22.961667,22.961635,22.961607,22.961575,22.961493,22.961417,22.961345,22.961235,22.961212,22.961203,22.96113,22.961052,22.96097,22.960875,22.960785,22.9607,22.960602,22.960485,22.96038,22.960283,22.960192,22.960085,22.959973,22.959873,22.959772,22.959672,22.959572,22.959478,22.959382,22.959333,22.959238,22.959137,22.959072,22.95905,22.958998,22.958925,22.958837,22.958747,22.958647,22.958558,22.958468,22.958395,22.9583,22.958192,22.958085,22.958018,22.95792,22.957825,22.957737,22.957648,22.957568,22.9575,22.957415,22.95732,22.957235,22.95716,22.957073,22.956958,22.956862,22.956763,22.956685,22.956598,22.95651,22.956425,22.95633,22.956247,22.956153,22.956055,22.955968,22.955873,22.955768,22.955695,22.955613,22.955577,22.955567,22.955557,22.955652,22.955768,22.955867,22.955967,22.95608,22.956178,22.95627,22.956357,22.95645,22.956565,22.956672,22.956782,22.956877,22.956985,22.957088,22.957182,22.957278,22.957387,22.95748,22.957585,22.957683,22.957775,22.957887,22.958003,22.958105,22.958212,22.958317,22.95842,22.958522,22.958615,22.958718,22.958818,22.958923,22.95904,22.959078,22.959118,22.95914,22.959128,22.959085,22.959078,22.95914,22.959138,22.959075,22.959052,22.95907,22.959098,22.959133,22.959183,22.959225,22.959275,22.95934,22.959405,22.959442,22.959492,22.959523,22.959462,22.959397,22.959395,22.959395],1,null,null,{"interactive":true,"className":"","stroke":true,"color":"gray","weight":5,"opacity":0.7,"fill":true,"fillColor":"gray","fillOpacity":0.2},null,null,null,{"interactive":false,"permanent":false,"direction":"auto","opacity":1,"offset":[0,0],"textsize":"10px","textOnly":false,"className":"","sticky":true},null,null]},{"method":"addCircles","args":[[40.643013,40.643055,40.643085,40.643092,40.643105,40.643072,40.643013,40.642947,40.642887,40.64285,40.642803,40.642753,40.642712,40.642683,40.64261,40.642545,40.64247,40.642412,40.6424,40.64242,40.642462,40.642502,40.642535,40.642568,40.642613,40.642635,40.642707,40.642747,40.642785,40.642803,40.64284,40.642898,40.64295,40.642982,40.642983,40.643012,40.643055,40.643068,40.643053,40.643082,40.643108,40.643155,40.643193,40.64321,40.643213,40.643235,40.643247,40.643317,40.643242,40.64325,40.64328,40.643308,40.643345,40.643368,40.64337,40.643445,40.643533,40.643615,40.643693,40.643772,40.643857,40.643938,40.644015,40.644103,40.644187,40.644272,40.644352,40.644428,40.644513,40.644428,40.644348,40.64427,40.644197,40.644222,40.644248,40.644257,40.644282,40.644325,40.644413,40.644467,40.644513,40.644537,40.644577,40.644625,40.644685,40.64474,40.64481,40.64487,40.644935,40.644987,40.64504,40.645078,40.645128,40.645162,40.64519,40.645243,40.64528,40.645313,40.645347,40.64539,40.645433,40.645468,40.645515,40.645545,40.645548,40.645528,40.645503,40.645515,40.645483,40.645427,40.645392,40.645325,40.645257,40.645202,40.64515,40.64512,40.645145,40.645145,40.64508,40.645048,40.645013,40.644958,40.644888,40.644838,40.644778,40.644725,40.64464,40.644557,40.6445,40.644447,40.644403,40.644355,40.644307,40.644243,40.644173,40.6441,40.64402,40.644055,40.644117,40.64418,40.644102,40.644013,40.643925,40.643837,40.643808,40.643833,40.643847,40.643883,40.643917,40.643945,40.64395,40.643955,40.64396,40.643967,40.643965,40.64397,40.64394,40.643862,40.643788,40.643727,40.643623,40.643595,40.64358,40.643543,40.643503,40.64355,40.643598,40.643667,40.643708,40.643787,40.643868,40.643935,40.643918,40.6439,40.643915,40.643928,40.643938,40.643962,40.643957,40.64393,40.643878,40.643853,40.64384,40.643803,40.643827,40.643855,40.64393,40.643975,40.644065,40.644088,40.644155,40.644215,40.64426,40.644277,40.644347,40.644405,40.644458,40.64449,40.644552,40.644633,40.644695,40.644768,40.644842,40.644897,40.644965,40.645038,40.645082,40.645105,40.645115,40.645112,40.645153,40.645162,40.645207,40.645257,40.645308,40.645363,40.645418,40.645467,40.645505,40.645517,40.64551,40.645512,40.645487,40.645495,40.645498,40.645478,40.64544,40.6454,40.645353,40.645317,40.64527,40.645233,40.645188,40.645147,40.645107,40.645078,40.64505,40.644995,40.644933,40.644873,40.64482,40.644773,40.644718,40.644668,40.644635,40.644563,40.644508,40.644465,40.64442,40.644367,40.64431,40.644252,40.644247,40.644238,40.644213,40.644138,40.64407,40.643992,40.643917,40.643858,40.643765,40.64369,40.643605,40.643537,40.64349,40.643408,40.643358,40.643295,40.643237,40.643183,40.64316,40.643163,40.643177,40.6432,40.643198,40.643193,40.643188,40.643155,40.643102,40.643063,40.643018,40.642963,40.64297,40.642965,40.642938,40.642902,40.64286,40.642808,40.642807,40.642788,40.642783,40.64275,40.642705,40.642677,40.642617,40.642578,40.642592,40.642567,40.642528,40.642493,40.642472,40.64245,40.642462,40.64246,40.642442,40.64239,40.64235,40.642297,40.64226,40.642215,40.642215,40.642202,40.642175,40.642185,40.642168,40.642187,40.642253,40.642283,40.642345,40.642407,40.642477,40.642538,40.642613,40.64265,40.642717,40.642803,40.642878,40.642943,40.643023,40.643085,40.643092,40.643092],[22.95932,22.959222,22.959123,22.959012,22.958905,22.958817,22.95875,22.958687,22.958612,22.958515,22.958428,22.958337,22.958237,22.958142,22.958083,22.958032,22.957972,22.957887,22.95779,22.957677,22.95759,22.95749,22.957392,22.957302,22.957208,22.957095,22.957047,22.956957,22.956868,22.956768,22.956672,22.956582,22.956485,22.956382,22.956273,22.956162,22.956068,22.955952,22.955838,22.955738,22.955628,22.955528,22.955433,22.955327,22.955217,22.95511,22.954998,22.954997,22.954935,22.954828,22.954718,22.954618,22.95453,22.954423,22.95431,22.954267,22.954287,22.954265,22.95431,22.954352,22.954365,22.954413,22.954447,22.954455,22.954422,22.95443,22.954447,22.954472,22.954472,22.954445,22.954453,22.954475,22.954408,22.9543,22.954193,22.954092,22.95399,22.953892,22.953883,22.953792,22.953697,22.953587,22.953488,22.953393,22.953308,22.953232,22.953165,22.953088,22.953015,22.952938,22.952853,22.952747,22.952655,22.952547,22.952443,22.952365,22.95227,22.952173,22.952077,22.951988,22.951902,22.951813,22.951713,22.951605,22.9515,22.951395,22.951295,22.95119,22.951095,22.951018,22.95092,22.950848,22.9508,22.950718,22.950645,22.950542,22.950435,22.95033,22.950252,22.950145,22.95004,22.949955,22.950012,22.950097,22.95017,22.95026,22.950297,22.950253,22.950168,22.950075,22.949988,22.949907,22.949808,22.949742,22.949678,22.949622,22.949583,22.949478,22.949445,22.949407,22.94943,22.949442,22.94943,22.949415,22.949308,22.949202,22.949102,22.949002,22.9489,22.948792,22.948687,22.948573,22.94846,22.94836,22.948248,22.94821,22.948092,22.94805,22.947985,22.947937,22.947918,22.948025,22.94814,22.948238,22.948335,22.948235,22.94814,22.948068,22.947972,22.947982,22.948025,22.9481,22.948202,22.948305,22.948413,22.948518,22.948588,22.948695,22.948803,22.948878,22.949002,22.949097,22.94921,22.949295,22.949405,22.94942,22.949483,22.949517,22.949547,22.94956,22.94966,22.94971,22.949812,22.949833,22.9499,22.94998,22.950072,22.95018,22.950265,22.950313,22.95024,22.950178,22.950118,22.950038,22.949967,22.950013,22.950128,22.950222,22.950327,22.95036,22.950475,22.950512,22.950633,22.95071,22.95078,22.950867,22.95095,22.951033,22.951135,22.951238,22.95129,22.95142,22.95153,22.951643,22.951743,22.951843,22.951938,22.952028,22.952122,22.952218,22.952307,22.952402,22.952497,22.952582,22.952683,22.952778,22.952878,22.952952,22.953027,22.9531,22.953172,22.953265,22.953357,22.95344,22.953505,22.953582,22.953662,22.953747,22.953843,22.953922,22.954012,22.95409,22.954193,22.954305,22.954415,22.954465,22.954508,22.954525,22.954508,22.954485,22.954448,22.954423,22.954403,22.954348,22.95433,22.954315,22.954395,22.95447,22.954548,22.954643,22.95471,22.954805,22.954912,22.955022,22.955138,22.955245,22.955352,22.955428,22.95552,22.955612,22.955697,22.955772,22.95581,22.955937,22.956038,22.956135,22.956238,22.95633,22.956438,22.956545,22.956578,22.956688,22.956787,22.956853,22.95693,22.957023,22.95706,22.957178,22.957278,22.957368,22.957473,22.957585,22.957692,22.957713,22.95784,22.957925,22.958022,22.958112,22.958218,22.958313,22.958427,22.958537,22.958642,22.958757,22.958868,22.958892,22.95893,22.958953,22.959003,22.959088,22.959142,22.95922,22.959285,22.959338,22.959388,22.959408,22.959462,22.959538,22.959578,22.959497,22.959488,22.959488],1,null,null,{"interactive":true,"className":"","stroke":true,"color":"green","weight":5,"opacity":0.7,"fill":true,"fillColor":"green","fillOpacity":0.2},null,null,null,{"interactive":false,"permanent":false,"direction":"auto","opacity":1,"offset":[0,0],"textsize":"10px","textOnly":false,"className":"","sticky":true},null,null]},{"method":"addCircles","args":[[40.643508,40.643457,40.643393,40.643428,40.643372,40.643293,40.64321,40.643187,40.643185,40.643215,40.643243,40.64328,40.643328,40.64336,40.643413,40.643462,40.643517,40.643565,40.643613,40.643675,40.64374,40.64382,40.643857,40.643943,40.644022,40.644105,40.644177,40.644263,40.644338,40.644425,40.644508,40.644572,40.644627,40.644667,40.644692,40.644723,40.644768,40.644817,40.644893,40.644908,40.644923,40.644988,40.645065,40.645082,40.645018,40.64495,40.645028,40.645102,40.645162,40.645218,40.645292,40.645343,40.6453,40.645252,40.645207,40.645145,40.645073,40.645012,40.644983,40.644925,40.644868,40.644807,40.644738,40.644707,40.644632,40.64456,40.644502,40.644458,40.644403,40.64434,40.644257,40.644185,40.644117,40.644055,40.643998,40.643968,40.643928,40.643888,40.643865,40.6438,40.643753,40.643713,40.643638,40.643565,40.643538,40.6435,40.643458,40.643427,40.643387,40.643332,40.643288,40.643248,40.643203,40.64319,40.643145,40.643065,40.642985,40.642903,40.642822,40.642747,40.642717,40.642708,40.64267,40.642602,40.642517,40.642432,40.642355,40.642297,40.642248,40.642208,40.64216,40.642133,40.642147,40.642137,40.64213,40.64213,40.642117,40.642068,40.642028,40.642008,40.641977,40.641938,40.64188,40.641828,40.641795,40.64175,40.64172,40.641697,40.641655,40.641627,40.641607,40.641583,40.641543,40.641503,40.641478,40.641487,40.641472,40.641442,40.641445,40.641427,40.641385,40.641337,40.641387,40.641473,40.641543,40.641627,40.641715,40.641795,40.641877,40.641958,40.642043,40.642112,40.6422,40.642288,40.642373,40.642442,40.642508,40.642578,40.64265,40.64272,40.642798,40.642862,40.642907,40.642992,40.643053,40.643087,40.643105,40.643022,40.642952,40.642897,40.643345,40.64336,40.643277,40.64325,40.643225,40.643267,40.643198,40.643207,40.643268,40.643325,40.643413,40.643413],[22.954832,22.954857,22.954718,22.954163,22.954175,22.954125,22.954088,22.953985,22.953872,22.953782,22.953683,22.95358,22.953485,22.95339,22.9533,22.953213,22.95312,22.95303,22.952937,22.952865,22.952792,22.952753,22.952675,22.952685,22.952643,22.952607,22.952563,22.952543,22.952487,22.952477,22.95247,22.952405,22.952328,22.952225,22.952127,22.952025,22.951925,22.951828,22.951783,22.951678,22.951582,22.951513,22.951468,22.951353,22.951272,22.951215,22.951252,22.95131,22.951378,22.951467,22.951523,22.951618,22.951702,22.951793,22.951878,22.951957,22.952025,22.952105,22.952213,22.952295,22.952377,22.952445,22.952512,22.95262,22.952653,22.952693,22.952762,22.952858,22.95293,22.953003,22.95303,22.95309,22.953165,22.95325,22.953315,22.953415,22.953515,22.953617,22.953717,22.953753,22.953837,22.95394,22.953993,22.954062,22.954172,22.954262,22.954363,22.95446,22.95454,22.954625,22.954718,22.954818,22.954913,22.955022,22.955112,22.955147,22.95516,22.955152,22.955125,22.95517,22.955273,22.955387,22.955482,22.955548,22.955538,22.955542,22.955572,22.95563,22.955715,22.955805,22.955887,22.955987,22.956082,22.956192,22.956307,22.956412,22.956517,22.95661,22.956702,22.956807,22.956917,22.957023,22.9571,22.957197,22.957288,22.957385,22.957482,22.957592,22.957683,22.957788,22.957902,22.958003,22.958103,22.958192,22.958288,22.958392,22.958508,22.958613,22.95871,22.958818,22.95892,22.959018,22.959105,22.95912,22.959188,22.95915,22.95916,22.9592,22.959195,22.959172,22.959135,22.959082,22.959095,22.959112,22.95912,22.959182,22.959238,22.959298,22.959368,22.959422,22.95946,22.959543,22.959638,22.95965,22.959585,22.959482,22.959373,22.959402,22.959453,22.959503,22.959757,22.959782,22.959518,22.95943,22.959322,22.959225,22.95915,22.959203,22.95927,22.959317,22.959303,22.959303],1,null,null,{"interactive":true,"className":"","stroke":true,"color":"red","weight":5,"opacity":0.7,"fill":true,"fillColor":"red","fillOpacity":0.2},null,null,null,{"interactive":false,"permanent":false,"direction":"auto","opacity":1,"offset":[0,0],"textsize":"10px","textOnly":false,"className":"","sticky":true},null,null]},{"method":"addCircles","args":[[40.644063,40.64408,40.644133,40.644158,40.64421,40.644163,40.644215,40.644273,40.64432,40.644368,40.644388,40.64441,40.644452,40.6445,40.644435,40.644395,40.64437,40.644348,40.644292,40.644233,40.644205,40.644192,40.64415,40.644105,40.644067,40.644032,40.643993,40.643948,40.643903,40.643888,40.643908,40.643938,40.643977,40.643958,40.643927,40.643902,40.643872,40.643843,40.64384,40.643802,40.643853,40.643937,40.644017,40.644097,40.644177,40.644235,40.644302,40.64433,40.64437,40.644408,40.644475,40.644537,40.644597,40.644678,40.644762,40.644808,40.644863,40.64493,40.644997,40.645067,40.645122,40.645125,40.64515,40.645198,40.645245,40.645312,40.645377,40.645415,40.645467,40.645492,40.645522,40.64553,40.645542,40.645527,40.645502,40.645485,40.645427,40.645388,40.645365,40.645328,40.645285,40.645242,40.64519,40.645145,40.645105,40.645067,40.645035,40.644975,40.644932,40.644895,40.644828,40.64476,40.64469,40.644627,40.644582,40.644558,40.644538,40.644505,40.644473,40.644413,40.64437,40.644313,40.64427,40.644245,40.644227,40.644152,40.644072,40.64399,40.643917,40.643837,40.64375,40.64369,40.643603,40.643535,40.643483,40.643445,40.6434,40.643332,40.643277,40.643237,40.643215,40.643203,40.643203,40.643213,40.643213,40.643162,40.64313,40.643093,40.643075,40.643067,40.643057,40.643033,40.64298,40.642925,40.642903,40.642905,40.642868,40.642808,40.642735,40.642693,40.642655,40.64264,40.642618,40.642588,40.64256,40.64252,40.642465,40.642427,40.642398,40.64235,40.642352,40.642352,40.642332,40.642302,40.642275,40.64226,40.642242,40.642235,40.6422,40.642167,40.642172,40.642243,40.642317,40.642382,40.64245,40.642517,40.64259,40.642665,40.642743,40.64282,40.642898,40.642972,40.643055,40.643102,40.643067,40.643052,40.643052],[22.947967,22.947857,22.94777,22.947668,22.947572,22.947478,22.947398,22.947322,22.94723,22.947137,22.947027,22.946927,22.946823,22.946747,22.946828,22.946927,22.947032,22.947142,22.947218,22.947292,22.947402,22.947507,22.947603,22.947695,22.947802,22.947907,22.948007,22.948103,22.948197,22.948305,22.948413,22.948522,22.948622,22.948727,22.94883,22.948927,22.949037,22.949145,22.949248,22.949348,22.949438,22.949468,22.949508,22.949493,22.949522,22.949612,22.94968,22.949778,22.94988,22.949978,22.950053,22.950112,22.950193,22.950218,22.95018,22.950092,22.95,22.95007,22.950133,22.950192,22.950275,22.950382,22.95049,22.950583,22.950677,22.950745,22.950803,22.950908,22.951005,22.951118,22.95122,22.951332,22.951445,22.95156,22.951662,22.951773,22.951855,22.951935,22.952023,22.952123,22.952217,22.952317,22.952408,22.952503,22.952598,22.952687,22.952787,22.952867,22.952953,22.953057,22.95312,22.953177,22.953243,22.953307,22.953408,22.953498,22.953607,22.95371,22.953807,22.953885,22.953977,22.954053,22.954157,22.95427,22.95438,22.954432,22.954418,22.954395,22.954357,22.954332,22.95435,22.954267,22.954237,22.954305,22.95439,22.954493,22.954565,22.954632,22.954715,22.954812,22.954913,22.95502,22.955138,22.955242,22.955348,22.955443,22.955542,22.955648,22.955755,22.95587,22.955967,22.956077,22.956163,22.956243,22.95635,22.956458,22.956557,22.956627,22.956688,22.956787,22.956882,22.956982,22.957095,22.9572,22.957302,22.957395,22.957475,22.957568,22.95767,22.957763,22.957875,22.957982,22.958092,22.958192,22.958303,22.958415,22.958522,22.958623,22.958728,22.95883,22.95894,22.958988,22.959035,22.959092,22.959145,22.959217,22.959253,22.959308,22.95935,22.959393,22.95943,22.959465,22.959495,22.959402,22.959293,22.959292,22.959292],1,null,null,{"interactive":true,"className":"","stroke":true,"color":"yellow","weight":5,"opacity":0.7,"fill":true,"fillColor":"yellow","fillOpacity":0.2},null,null,null,{"interactive":false,"permanent":false,"direction":"auto","opacity":1,"offset":[0,0],"textsize":"10px","textOnly":false,"className":"","sticky":true},null,null]},{"method":"addSearchOSM","args":[{"url":"","propertyLoc":"loc","propertyName":"title","moveToLocation":true,"zoom":17,"container":"","minLength":2,"initial":true,"casesensitive":false,"autoType":true,"delayType":400,"tooltipLimit":-1,"tipAutoSubmit":true,"firstTipSubmit":false,"autoResize":true,"collapsed":true,"autoCollapse":true,"autoCollapseTime":1200,"textErr":"Location Not Found","textCancel":"Cancel","textPlaceholder":"Search...","position":"topleft","hideMarkerOnCollapse":false}]}],"limits":{"lat":[40.625307,40.649423],"lng":[22.938297,22.964963]}},"evals":[],"jsHooks":[]}</script>
 </div>
 </div>
 
