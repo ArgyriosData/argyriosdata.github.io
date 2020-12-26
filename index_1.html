@@ -2,15 +2,14 @@
 <html>
 <head>
 <meta charset='UTF-8'><meta name='viewport' content='width=device-width initial-scale=1'>
-<title>menu</title><link href='https://raw.githubusercontent.com/slashfoo/lmweb/master/style/latinmodern-mono-light.css' rel='stylesheet' type='text/css' /><style type='text/css'>html {overflow-x: initial !important;}:root { --bg-color:#ffffff; --text-color:#333333; --select-text-bg-color:#B5D6FC; --select-text-font-color:auto; --monospace:"Lucida Console",Consolas,"Courier",monospace; --title-bar-height:20px; }
-.mac-os-11 { --title-bar-height:28px; }
+<title>Contents_github_main_page</title><style type='text/css'>html {overflow-x: initial !important;}:root { --bg-color:#ffffff; --text-color:#333333; --select-text-bg-color:#B5D6FC; --select-text-font-color:auto; --monospace:"Lucida Console",Consolas,"Courier",monospace; }
 html { font-size: 14px; background-color: var(--bg-color); color: var(--text-color); font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased; }
 body { margin: 0px; padding: 0px; height: auto; bottom: 0px; top: 0px; left: 0px; right: 0px; font-size: 1rem; line-height: 1.42857; overflow-x: hidden; background: inherit; tab-size: 4; }
 iframe { margin: auto; }
 a.url { word-break: break-all; }
 a:active, a:hover { outline: 0px; }
 .in-text-selection, ::selection { text-shadow: none; background: var(--select-text-bg-color); color: var(--select-text-font-color); }
-#write { margin: 0px auto; height: auto; width: inherit; word-break: normal; overflow-wrap: break-word; position: relative; white-space: normal; overflow-x: visible; padding-top: 36px; }
+#write { margin: 0px auto; height: auto; width: inherit; word-break: normal; overflow-wrap: break-word; position: relative; white-space: normal; overflow-x: visible; padding-top: 40px; }
 #write.first-line-indent p { text-indent: 2em; }
 #write.first-line-indent li p, #write.first-line-indent p * { text-indent: 0px; }
 #write.first-line-indent li { margin-left: 2em; }
@@ -78,7 +77,6 @@ div.hr:focus { cursor: none; }
 li div { padding-top: 0px; }
 blockquote { margin: 1rem 0px; }
 li .mathjax-block, li p { margin: 0.5rem 0px; }
-li blockquote { margin: 1rem 0px; }
 li { margin: 0px; position: relative; }
 blockquote > :last-child { margin-bottom: 0px; }
 blockquote > :first-child, li > :first-child { margin-top: 0px; }
@@ -88,6 +86,7 @@ blockquote > :first-child, li > :first-child { margin-top: 0px; }
   body, html { border: 1px solid transparent; height: 99%; break-after: avoid; break-before: avoid; font-variant-ligatures: no-common-ligatures; }
   #write { margin-top: 0px; padding-top: 0px; border-color: transparent !important; }
   .typora-export * { -webkit-print-color-adjust: exact; }
+  html.blink-to-pdf { font-size: 13px; }
   .typora-export #write { break-after: avoid; }
   .typora-export #write::after { height: 0px; }
   .is-mac table { break-inside: avoid; }
@@ -101,7 +100,6 @@ p > .md-image:only-child { display: inline-block; width: 100%; }
 #write .MathJax_Display { margin: 0.8em 0px 0px; }
 .md-math-block { width: 100%; }
 .md-math-block:not(:empty)::after { display: none; }
-.MathJax_ref { fill: currentcolor; }
 [contenteditable="true"]:active, [contenteditable="true"]:focus, [contenteditable="false"]:active, [contenteditable="false"]:focus { outline: 0px; box-shadow: none; }
 .md-task-list-item { position: relative; list-style-type: none; }
 .task-list-item.md-task-list-item { padding-left: 0px; }
@@ -152,273 +150,305 @@ table tr th { border-bottom: 0px; }
 video { max-width: 100%; display: block; margin: 0px auto; }
 iframe { max-width: 100%; width: 100%; border: none; }
 .highlight td, .highlight tr { border: 0px; }
+svg[id^="mermaidChart"] { line-height: 1em; }
 mark { background: rgb(255, 255, 0); color: rgb(0, 0, 0); }
 .md-html-inline .md-plain, .md-html-inline strong, mark .md-inline-math, mark strong { color: inherit; }
 mark .md-meta { color: rgb(0, 0, 0); opacity: 0.3 !important; }
 @media print {
   .typora-export h1, .typora-export h2, .typora-export h3, .typora-export h4, .typora-export h5, .typora-export h6 { break-inside: avoid; }
 }
-.md-diagram-panel .messageText { stroke: none !important; }
-.md-diagram-panel .start-state { fill: var(--node-fill); }
-.md-diagram-panel .edgeLabel rect { opacity: 1 !important; }
-.md-require-zoom-fix foreignobject { font-size: var(--mermaid-font-zoom); }
 
-
-:root {
-    --side-bar-bg-color: white;
-    --window-border: none;
-    --search-select-bg-color: #575c61;
-    --active-file-bg-color: #f1f4f5;
-    --item-hover-bg-color: #f1f4f5;
-    --item-hover-text-color: black;
-    --control-text-color: #555;
-}
-
-@include-when-export url(https://raw.githubusercontent.com/slashfoo/lmweb/master/style/latinmodern-mono-light.css);
 
 html {
-    font-size: 12pt;
+	font-size: 19px;
+}
+
+html, body {
+	margin: auto;
+	background: #fefefe;
+}
+body {
+	font-family: "Vollkorn", Palatino, Times;
+	color: #333;
+	line-height: 1.4;
+	text-align: justify;
 }
 
 #write {
-    font-family: "STIX2Text", "Times New Roman", "serif";
-    line-height: 1.5em;
-    padding: 10%;
-    padding-top: 5%;
+	max-width: 960px;
+	margin: 0 auto;
+	margin-bottom: 2em;
+	line-height: 1.53;
+	padding-top: 40px;
 }
 
-.file-list-item-summary {
-    height: 36px;
+@media only screen and (min-width: 1400px) {
+	#write {
+		max-width: 1100px;
+	}
 }
 
-.file-list-item {
-    padding-top: 18px !important;
-    padding-bottom: 18px;
+/* Typography
+-------------------------------------------------------- */
+
+#write>h1:first-child,
+h1 {
+	margin-top: 1.6em;
+	font-weight: normal;
 }
 
-#sidebar-loading-template.file-list-item {
-    padding-top: 0 !important;
-}
-
-a, a:visited {
-    color: #a00;
-}
-
-h1, h2, h3, h4, h5, h6 {
-    font-family: inherit;
-    line-height: 1.5em;
-    margin-bottom: 1em;
-    margin-top: 1em;
-}
-
-h1  {
-    font-size: 2.4em;
-}
-
-#write h1  {
-    text-align: center;
+h1 {
+	font-size:3em;
 }
 
 h2 {
-    font-size: 1.8em;
+	margin-top:2em;
+	font-weight: normal;
 }
 
 h3 {
-    font-size: 1.4em;
+	font-weight: normal;
+	font-style: italic;
+	margin-top: 3em;
 }
 
-h4 {
-    font-size: 1.2em;
+h1, 
+h2, 
+h3{
+	text-align: center;
 }
 
-h5  {
-    font-size: 1.1em;
-}
-
-h6 {
-    font-size: 1em;
-}
-
-p {
-    margin-top: 1em;
-    margin-bottom: 1em;
-    text-align: justify;
-}
-
-pre, code {
-    font-family: 'Latin Modern Mono Light', "Latin Modern Mono", monospace !important;
-}
-
-.footnotes {
-    display: list-item;
-    margin-left: 1em;
-}
-
-.md-fences {
-    border: 1px solid;
-}
-
-.md-fences.md-fences-with-lineno {
-    border: none;
-}
-
-.CodeMirror-linenumber {
-    color: #333;
-}
-
-*.in-text-selection,
-::selection,
-.CodeMirror-selected {
-    background: var(--search-select-bg-color);
-    color: var(--search-select-text-color) !important;
-    text-shadow: none;
-}
-
-a.md-toc-inner {
-    color: var(--text-color);
-}
-
-.cm-s-typora-default .cm-link {
-    color: #a00;
-    text-decoration: underline;
-}
-
-.cm-s-typora-default .cm-header, .cm-s-typora-default .cm-property {
-    color: black;
-}
-
-#typora-source .CodeMirror-lines {
-    -webkit-font-smoothing: auto;
-    max-width: 1000px;
-}
-
-.md-def-name:before,
-.md-def-name:after {
-    color: #2d2d2d;
-}
-
-sup.md-footnote {
-    background-color: initial;
-    color: inherit;
-}
-
-mark {
-    background: #fff387;
-}
-
-td, th {
-    border: 1px solid;
-    padding-left: 1ch;
-    padding-right: 1ch;
-}
-
-/*table tr[cid]:first-child > td {
-    border-top: 3px double;
-}*/
-
-th {
-    border-bottom: 0;
-    padding-top: 2px;
-    background: #575c61;
-    border-color: #333;
-    color: #f3f3f3;
-}
-
-pre.md-meta-block {
-    border: 1px solid #a2a9b1;
-    background-color: #f8f9fa;
-    padding: 5px;
-    margin-bottom: 1em;
-}
-
-.task-list-item input:before {
-    content: '\221A';
-    display: inline-block;
-    width: 1.25rem;
-    height: 1.6rem;
-    vertical-align: middle;
-    text-align: center;
-    color: #bbb;
-    background-color: inherit;
-}
-
-.task-list-item input:checked:before,
-.task-list-item input[checked]:before{
-    color: inherit;
-}
-
-.md-task-list-item > input {
-    top: auto;
-    margin-left: -1.1em;
-    font-size: 1.3em;
-    margin-top: 0px;
-    -webkit-appearance: none;
-}
-
-.md-task-list-item input:before {
-    content: '\2610';
-    display: inline-block;
-    width: 1.25rem;
-    height: 1.6rem;
-    vertical-align: middle;
-    text-align: center;
-    color: #bbb;
-    background-color: inherit;
-}
-
-.md-task-list-item input:checked:before,
-.md-task-list-item input[checked]:before{
-    color: inherit;
-    content: '\2611';
-}
-
-.task-list-item {
-    padding-left: 1.5em;
-}
-
-blockquote {
-    font-style: italic;
-    padding: 0.25em 24px;
-    position: relative;
-    color: #383838;
-    border-left: 2px solid;
-    
-}
-
-#write > blockquote {
-    padding: 0.25em 30px;
-    margin-left: -32px;
-    width: calc(100% + 32px);
-}
-
-#write >  .md-fences-with-lineno {
-    margin-left: -33px;
-    color: black;
-}
-
-.CodeMirror-linenumber {
-    min-width: 25px;
-}
-
-.md-header {
-    font-size: inherit !important;
-}
-
-/*blockquote:before {
+h2:after{
+	border-bottom: 1px solid #2f2f2f;
+    content: '';
+    width: 100px;
     display: block;
-    content: "\201C";
-    font-size: 80px;
-    position: absolute;
-    left: -20px;
-    top: -20px;
-    color: #7a7a7a;
-}*/
+    margin: 0 auto;
+    height: 1px;
+}
+
+h1+h2, h2+h3 {
+	margin-top: 0.83em;
+}
+
+p,
+.mathjax-block {
+	margin-top: 0;
+	-webkit-hypens: auto;
+	-moz-hypens: auto;
+	hyphens: auto;
+}
+ul {
+	list-style: square;
+	padding-left: 1.2em;
+}
+ol {
+	padding-left: 1.2em;
+}
+blockquote {
+	margin-left: 1em;
+	padding-left: 1em;
+	border-left: 1px solid #ddd;
+}
+code,
+pre {
+	font-family: "Consolas", "Menlo", "Monaco", monospace, serif;
+	font-size: .9em;
+	background: white;
+}
+.md-fences{
+	margin-left: 1em;
+	padding-left: 1em;
+	border: 1px solid #ddd;
+	padding-bottom: 8px;
+	padding-top: 6px;
+	margin-bottom: 1.5em;
+}
+
+a {
+	color: #2484c1;
+	text-decoration: none;
+}
+a:hover {
+	text-decoration: underline;
+}
+a img {
+	border: none;
+}
+h1 a,
+h1 a:hover {
+	color: #333;
+	text-decoration: none;
+}
+hr {
+	color: #ddd;
+	height: 1px;
+	margin: 2em 0;
+	border-top: solid 1px #ddd;
+	border-bottom: none;
+	border-left: 0;
+	border-right: 0;
+}
+.ty-table-edit {
+	background: #ededed;
+    padding-top: 4px;
+}
+table {
+	margin-bottom: 1.333333rem
+}
+table th,
+table td {
+	padding: 8px;
+	line-height: 1.333333rem;
+	vertical-align: top;
+	border-top: 1px solid #ddd
+}
+table th {
+	font-weight: bold
+}
+table thead th {
+	vertical-align: bottom
+}
+table caption+thead tr:first-child th,
+table caption+thead tr:first-child td,
+table colgroup+thead tr:first-child th,
+table colgroup+thead tr:first-child td,
+table thead:first-child tr:first-child th,
+table thead:first-child tr:first-child td {
+	border-top: 0
+}
+table tbody+tbody {
+	border-top: 2px solid #ddd
+}
+
+.task-list{
+	padding:0;
+}
+
+.md-task-list-item {
+	padding-left: 1.6rem;
+}
+
+.md-task-list-item > input:before {
+	content: '\221A';
+	display: inline-block;
+	width: 1.33333333rem;
+  	height: 1.6rem;
+	vertical-align: middle;
+	text-align: center;
+	color: #ddd;
+	background-color: #fefefe;
+}
+
+.md-task-list-item > input:checked:before,
+.md-task-list-item > input[checked]:before{
+	color: inherit;
+}
+.md-tag {
+	color: inherit;
+	font: inherit;
+}
+#write pre.md-meta-block {
+	min-height: 35px;
+	padding: 0.5em 1em;
+}
+#write pre.md-meta-block {
+	white-space: pre;
+	background: #f8f8f8;
+	border: 0px;
+	color: #999;
+	
+	width: 100vw;
+	max-width: calc(100% + 60px);
+	margin-left: -30px;
+	border-left: 30px #f8f8f8 solid;
+	border-right: 30px #f8f8f8 solid;
+
+	margin-bottom: 2em;
+	margin-top: -1.3333333333333rem;
+	padding-top: 26px;
+	padding-bottom: 10px;
+	line-height: 1.8em;
+	font-size: 0.9em;
+	font-size: 0.76em;
+	padding-left: 0;
+}
+.md-img-error.md-image>.md-meta{
+	vertical-align: bottom;
+}
+#write>h5.md-focus:before {
+	top: 2px;
+}
+
+.md-toc {
+	margin-top: 40px;
+}
+
+.md-toc-content {
+	padding-bottom: 20px;
+}
+
+.outline-expander:before {
+	color: inherit;
+	font-size: 14px;
+	top: auto;
+	content: "\f0da";
+	font-family: FontAwesome;
+}
+
+.outline-expander:hover:before,
+.outline-item-open>.outline-item>.outline-expander:before {
+  	content: "\f0d7";
+}
+
+/** source code mode */
+#typora-source {
+	font-family: Courier, monospace;
+    color: #6A6A6A;
+}
+
+.html-for-mac #typora-sidebar {
+    -webkit-box-shadow: 0 6px 12px rgba(0, 0, 0, .175);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, .175);
+}
+
+.cm-s-typora-default .cm-header, 
+.cm-s-typora-default .cm-property,
+.CodeMirror.cm-s-typora-default div.CodeMirror-cursor {
+	color: #428bca;
+}
+
+.cm-s-typora-default .cm-atom, .cm-s-typora-default .cm-number {
+	color: #777777;
+}
+
+.typora-node .file-list-item-parent-loc, 
+.typora-node .file-list-item-time, 
+.typora-node .file-list-item-summary {
+	font-family: arial, sans-serif;
+}
+
+.md-task-list-item>input {
+    margin-left: -1.3em;
+    margin-top: calc(1rem - 12px);
+}
+
+.md-mathjax-midline {
+	background: #fafafa;
+}
+
+.md-fences .code-tooltip {
+	bottom: -2em !important;
+}
+
+.dropdown-menu .divider {
+	border-color: #e5e5e5;
+}
 
 
- :root {--mermaid-font-zoom:1.5em ;} 
 </style>
 </head>
 <body class='typora-export os-windows'>
-<div id='write'  class=''><p>&nbsp;</p><h3><a name="-homehttpsargyriosdatagithubio--cvhttpsargyriosdatagithubiodocscvpdf--bloghttpsagdataprojectswordpresscom--courseshttpsargyriosdatagithubiocourses--certificateshttpsargyriosdatagithubiodocscertificatespdf--contacthttpsagdataprojectswordpresscomcontact-" class="md-header-anchor"></a><span>| </span><strong><a href='https://argyriosdata.github.io/'><span>Home</span></a></strong><span> | </span><strong><a href='https://argyriosdata.github.io/docs/CV.pdf'><span>CV</span></a></strong><span> | </span><strong><a href='https://agdataprojects.wordpress.com/'><span>Blog</span></a></strong><span> | </span><strong><a href='https://argyriosdata.github.io/courses'><span>Courses</span></a></strong><span> | </span><strong><a href='https://argyriosdata.github.io/docs/certificates.pdf'><span>Certificates</span></a></strong><span> | </span><strong><a href='https://agdataprojects.wordpress.com/contact/'><span>Contact</span></a></strong><span> |</span></h3><p><a href='https://www.linkedin.com/in/argyrios/'><span>LinkedIn</span></a><span> | </span><a href='https://twitter.com/argeordata'><span>Twitter</span></a><span> | </span><a href='https://www.instagram.com/artwithcoding/'><span>Instagram</span></a></p><h3><a name="projects-updated-271220" class="md-header-anchor"></a><strong><span>Projects</span></strong><span> (updated 27/12/20)</span></h3><h3><a name="exploratory-data-analysis-data-manipulation-visualization" class="md-header-anchor"></a><span>Exploratory Data Analysis/ Data Manipulation/ Visualization </span></h3><ul><li><a href='https://agdataprojects.wordpress.com/2020/12/16/dashboard-in-r-with-covid-deaths-and-cases-data/'><span>Dashboard in R with Covid deaths and cases data</span></a></li><li><a href='https://agdataprojects.wordpress.com/2020/10/20/exploring-worldwide-covid-19-cases-ecdc-with-r/'><span>Exploring worldwide Covid-19 cases (ECDC) with R</span></a></li><li><a href='https://agdataprojects.wordpress.com/2020/10/19/exploring-aviation-accidents-data/'><span>Exploring aviation accidents data</span></a></li></ul><h3><a name="machine-learning" class="md-header-anchor"></a><span>Machine Learning</span></h3><ul><li><a href='https://agdataprojects.wordpress.com/2020/12/22/kmeans-and-hierarchical-clustering-of-customers-based-in-their-buying-habits-using-python-sklearn/'><span>Kmeans and hierarchical clustering of customers based in their buying habits using Python/ sklearn</span></a></li><li><a href='https://agdataprojects.wordpress.com/2020/11/21/kmeans-and-hierarchical-clustering-of-customers-based-in-their-buying-habits/'><span>Kmeans and hierarchical clustering of customers based in their buying habits with R</span></a></li><li><a href='https://agdataprojects.wordpress.com/2020/12/22/multiple-linear-regression-with-python-sklearn-for-the-prediction-of-concrete-strength/'><span>Multiple Linear Regression with Python/ sklearn for the prediction of Concrete Strength</span></a></li><li><a href='https://agdataprojects.wordpress.com/2020/11/15/multiple-linear-regression-vs-generalised-additive-model-in-r-for-the-prediction-of-concrete-strength/'><span>Multiple Linear Regression vs Generalised Additive model in R for the prediction of Concrete Strength</span></a></li><li><a href='https://agdataprojects.wordpress.com/2020/12/18/k-nearest-neighbours-classification-with-python-sklearn/'><span>k Nearest neighbours classification with Python/ sklearn</span></a></li><li><a href='https://agdataprojects.wordpress.com/2020/11/10/k-nearest-neighbours-classification-with-r/'><span>k Nearest neighbours classification with R</span></a></li><li><a href='https://agdataprojects.wordpress.com/2020/12/18/binary-classification-of-wisconsin-breast-cancer-database-with-python-sklearn/'><span>Binary Classification of Wisconsin Breast Cancer Database with Python/ sklearn</span></a></li><li><a href='https://agdataprojects.wordpress.com/2020/11/10/binary-classification-of-wisconsin-breast-cancer-database-with-r/'><span>Binary Classification of Wisconsin Breast Cancer Database with R</span></a></li><li><a href='https://agdataprojects.wordpress.com/2020/12/12/using-naive-bayes-simple-decision-tree-model-and-random-forest-to-predict-if-a-load-will-be-repaid-in-r/'><span>Using Naive Bayes, Simple Decision Tree Model and Random Forest to predict if a loan will be repaid in R</span></a></li></ul><p>&nbsp;</p><h3><a name="text-mining-sentiment-analysis" class="md-header-anchor"></a><span>Text Mining/ Sentiment Analysis </span></h3><ul><li><a href='https://agdataprojects.wordpress.com/2020/12/16/sentiment-analysis-of-around-the-world-in-eighty-days-by-jules-verne/'><span>Sentiment Analysis of ‘Around the World in Eighty Days’ by Jules Verne</span></a></li><li><a href='https://agdataprojects.wordpress.com/2020/10/22/visualisation-of-popular-terms-and-sentiment-analysis-in-covid19-tweets/'><span>Visualisation of popular terms and sentiment analysis in #covid19 tweets</span></a></li><li><a href='https://agdataprojects.wordpress.com/2020/10/22/a-sentiment-analysis-of-tweets-about-trump-vs-joebiden/'><span>A sentiment analysis of tweets about #Trump vs #JoeBiden</span></a></li></ul><p>&nbsp;</p><h3><a name="time-series" class="md-header-anchor"></a><span>Time Series</span></h3><ul><li><a href='https://agdataprojects.wordpress.com/2020/12/12/forecasting-the-intubated-due-to-covid-19-patients-with-r-using-naive-auto-arima-and-ets-methods/'><span>Forecasting the intubated due to Covid -19 patients with R using naive, auto-arima and ets methods</span></a></li></ul><p>&nbsp;</p><h3><a name="sql" class="md-header-anchor"></a><span>SQL </span></h3><ul><li><a href='https://agdataprojects.wordpress.com/2020/12/23/connect-an-sql-database-to-r-explore-data-create-charts-from-the-data/'><span>Connect an SQL database to R, explore data, create charts from the data</span></a></li></ul><p>&nbsp;</p><h3><a name="other" class="md-header-anchor"></a><span>Other </span></h3><ul><li><span>Hypothesis Testing</span></li><li><a href='https://agdataprojects.wordpress.com/2020/12/18/mapping-of-multiple-walks-in-one-map-with-leaflet-in-r/'><span>Mapping of multiple walks in one map with leaflet in R</span></a></li></ul><p>&nbsp;</p></div>
+<div id='write'  class=''><h1><a name="argyrios-georgiadis" class="md-header-anchor"></a><span>Argyrios Georgiadis </span></h1><p><a href='https://argyrios.wixsite.com/data'><span>CV</span></a></p><h1><a name="list-of-projects" class="md-header-anchor"></a><span>List of projects </span></h1><p><a href='https://agdataprojects.wordpress.com/2020/10/19/exploring-aviation-accidents-data/'><span>Exploring aviation accidents data</span></a></p><p><a href='https://agdataprojects.wordpress.com/2020/10/20/exploring-worldwide-covid-19-cases-ecdc-with-r/'><span>Exploring worldwide Covid-19 cases (ECDC) with R</span></a></p><p><a href='https://agdataprojects.wordpress.com/2020/10/22/a-sentiment-analysis-of-tweets-about-trump-vs-joebiden/'><span>A sentiment analysis of tweets about #Trump vs #JoeBiden</span></a></p><p><a href='https://agdataprojects.wordpress.com/2020/10/22/visualisation-of-popular-terms-and-sentiment-analysis-in-covid19-tweets/'><span>Visualisation of popular terms and sentiment analysis in #covid19 tweets</span></a></p><p>&nbsp;</p></div>
 </body>
 </html>
